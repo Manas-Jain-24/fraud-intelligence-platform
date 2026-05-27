@@ -1,0 +1,79 @@
+Transaction_ID,Timestamp,Amount,Country,Device,Transaction_Type,Fraud_Probability,Status
+64bb4cae,2026-05-27 14:34:57.740652,699.43,Russia,Mobile,POS Payment,0.52,Flagged
+54f7d27d,2026-05-27 14:34:59.750273,3589.19,India,Desktop,POS Payment,0.31,Approved
+1aafd08a,2026-05-27 14:35:01.755964,186.82,Germany,Desktop,Online Purchase,0.88,Blocked
+da44f55e,2026-05-27 14:35:03.759081,9892.42,UK,Mobile,Bank Transfer,0.94,Blocked
+8c641c67,2026-05-27 14:35:05.766505,3887.39,UK,Mobile,Bank Transfer,0.83,Blocked
+fd475f20,2026-05-27 14:35:07.774456,5396.05,Germany,Desktop,Bank Transfer,0.52,Flagged
+1e0facea,2026-05-27 14:35:09.779761,7082.67,UK,Desktop,ATM Withdrawal,0.93,Blocked
+9f69255f,2026-05-27 14:35:11.784353,1732.63,USA,Mobile,ATM Withdrawal,0.14,Approved
+ed1d64b3,2026-05-27 14:35:13.795008,9096.02,China,Tablet,POS Payment,0.93,Blocked
+2b5edc71,2026-05-27 14:35:15.797862,9980.93,Russia,Tablet,POS Payment,1.0,Blocked
+f3966ef3,2026-05-27 14:35:17.802699,6719.63,Brazil,Tablet,Bank Transfer,0.38,Approved
+b14ed93d,2026-05-27 14:35:19.809023,4564.1,USA,Mobile,POS Payment,0.09,Approved
+bbf8410e,2026-05-27 14:35:21.813382,8764.12,Russia,Mobile,Online Purchase,1.0,Blocked
+c70d20d9,2026-05-27 14:35:23.820476,3421.01,UK,Tablet,ATM Withdrawal,0.84,Blocked
+821e389a,2026-05-27 14:35:25.825537,6263.02,China,Mobile,Bank Transfer,0.38,Approved
+f4676ded,2026-05-27 14:35:27.828204,1634.04,Germany,Desktop,Bank Transfer,0.06,Approved
+b37b0b09,2026-05-27 14:35:29.832852,7220.02,Russia,Mobile,Online Purchase,0.94,Blocked
+46e43c78,2026-05-27 14:35:31.837843,7094.17,UK,Tablet,Bank Transfer,0.95,Blocked
+368c4047,2026-05-27 14:35:33.844230,5923.07,India,Desktop,Bank Transfer,0.97,Blocked
+823665fd,2026-05-27 14:35:35.852909,9217.05,Russia,Desktop,Bank Transfer,1.0,Blocked
+4d28e74c,2026-05-27 14:35:37.860217,3256.66,India,Desktop,Bank Transfer,0.1,Approved
+19875671,2026-05-27 14:35:39.864955,2067.56,India,Tablet,Bank Transfer,0.08,Approved
+62ee9e87,2026-05-27 14:35:41.873039,4259.76,USA,Mobile,POS Payment,0.23,Approved
+98648317,2026-05-27 14:35:43.878527,7018.94,USA,Tablet,Online Purchase,1.0,Blocked
+81cb696d,2026-05-27 14:35:45.896489,4915.91,Brazil,Tablet,Online Purchase,0.89,Blocked
+278e33b8,2026-05-27 14:35:47.909441,2351.59,China,Mobile,Bank Transfer,0.7,Under Review
+3c1b6d0a,2026-05-27 14:35:49.912598,2142.52,China,Desktop,Bank Transfer,0.55,Flagged
+3257b434,2026-05-27 14:35:51.915608,8163.46,India,Desktop,ATM Withdrawal,0.32,Approved
+3ead9e12,2026-05-27 14:35:53.922254,3823.03,Russia,Mobile,ATM Withdrawal,1.0,Blocked
+5e1e6b5c,2026-05-27 14:35:55.939159,2594.75,UK,Desktop,Online Purchase,0.96,Blocked
+1f47fee2,2026-05-27 14:35:57.955834,7166.96,Russia,Desktop,POS Payment,0.94,Blocked
+c20f95f6,2026-05-27 14:35:59.962240,8800.95,USA,Tablet,Bank Transfer,0.94,Blocked
+4d03bdf6,2026-05-27 14:36:01.966311,1875.28,USA,Desktop,Online Purchase,0.44,Flagged
+66bb7440,2026-05-27 14:36:03.970389,8923.4,USA,Tablet,ATM Withdrawal,1.0,Blocked
+538ddbf1,2026-05-27 14:36:05.975381,813.41,UK,Mobile,POS Payment,0.18,Approved
+22007507,2026-05-27 14:36:07.983142,2401.58,India,Tablet,POS Payment,0.99,Blocked
+f1d5c3ba,2026-05-27 14:36:09.997456,7677.51,Russia,Mobile,Online Purchase,1.0,Blocked
+150e5fea,2026-05-27 14:36:12.003935,3997.44,Brazil,Mobile,Online Purchase,0.78,Under Review
+dec31554,2026-05-27 14:36:14.006307,5784.56,UK,Desktop,Online Purchase,0.01,Approved
+598273a4,2026-05-27 14:36:16.013039,4354.31,Brazil,Tablet,Online Purchase,1.0,Blocked
+7e18dec5,2026-05-27 14:36:18.030291,2183.79,Brazil,Tablet,Bank Transfer,0.51,Flagged
+ac045664,2026-05-27 14:36:20.036235,1573.31,Brazil,Mobile,Bank Transfer,0.34,Approved
+fb88adc0,2026-05-27 14:36:22.040061,8522.02,Brazil,Mobile,ATM Withdrawal,0.96,Blocked
+f166e6c8,2026-05-27 14:36:24.044997,6794.73,Brazil,Mobile,POS Payment,0.65,Under Review
+f5bec85f,2026-05-27 14:36:26.062374,7111.57,India,Desktop,Online Purchase,0.31,Approved
+2e2b3856,2026-05-27 14:36:28.079219,1650.82,Germany,Desktop,POS Payment,0.07,Approved
+9dcfe307,2026-05-27 14:36:30.082562,7844.45,India,Mobile,POS Payment,1.0,Blocked
+77a24a59,2026-05-27 14:36:32.089343,4163.66,Russia,Desktop,ATM Withdrawal,0.96,Blocked
+fec5a70c,2026-05-27 14:36:34.093344,7594.85,Russia,Tablet,ATM Withdrawal,1.0,Blocked
+6b9321bb,2026-05-27 14:36:36.106767,804.82,USA,Desktop,Online Purchase,0.56,Flagged
+f95f5245,2026-05-27 14:36:38.121725,2779.75,Brazil,Tablet,Online Purchase,1.0,Blocked
+f19df3c4,2026-05-27 14:36:40.134652,3598.02,Germany,Mobile,Bank Transfer,0.38,Approved
+5842d0da,2026-05-27 14:36:42.150364,8572.13,India,Mobile,ATM Withdrawal,0.78,Under Review
+40d57972,2026-05-27 14:36:44.158973,9592.87,India,Tablet,POS Payment,0.76,Under Review
+65927f17,2026-05-27 14:36:46.171634,1341.21,Brazil,Tablet,POS Payment,1.0,Blocked
+92bdeb57,2026-05-27 14:36:48.186103,5305.02,UK,Mobile,Bank Transfer,0.8,Under Review
+04610a49,2026-05-27 14:36:50.190962,3996.39,USA,Desktop,Bank Transfer,0.82,Blocked
+d277d243,2026-05-27 14:36:52.200829,3401.85,India,Mobile,ATM Withdrawal,1.0,Blocked
+233d1859,2026-05-27 14:36:54.204040,1756.46,Germany,Mobile,ATM Withdrawal,0.96,Blocked
+b9f63a76,2026-05-27 14:36:56.219710,9984.63,India,Mobile,Bank Transfer,0.98,Blocked
+35dfb028,2026-05-27 14:36:58.227255,1697.72,USA,Tablet,POS Payment,0.5,Flagged
+c6e0fba5,2026-05-27 14:37:00.235489,9903.37,UK,Desktop,POS Payment,0.68,Under Review
+ec6ff07f,2026-05-27 14:37:02.242970,6143.59,Russia,Tablet,ATM Withdrawal,0.84,Blocked
+40fde0f4,2026-05-27 14:37:04.248485,6369.24,Brazil,Mobile,ATM Withdrawal,0.35,Approved
+4831f143,2026-05-27 14:37:06.261218,868.41,Germany,Mobile,POS Payment,0.33,Approved
+8bb6964f,2026-05-27 14:37:08.267140,5675.21,UK,Desktop,POS Payment,0.89,Blocked
+92ed7239,2026-05-27 14:37:10.275912,2255.43,USA,Tablet,ATM Withdrawal,0.62,Under Review
+f5a483f0,2026-05-27 14:37:12.284197,6497.53,USA,Desktop,Bank Transfer,0.1,Approved
+a0b12e9b,2026-05-27 14:37:14.301175,4675.74,India,Tablet,ATM Withdrawal,0.65,Under Review
+c1bf3f95,2026-05-27 14:37:16.309614,7246.32,Russia,Mobile,Bank Transfer,0.68,Under Review
+406535e2,2026-05-27 14:37:18.317164,1645.36,India,Mobile,ATM Withdrawal,0.81,Blocked
+f69cea1d,2026-05-27 14:37:20.324623,5468.12,India,Desktop,ATM Withdrawal,0.7,Under Review
+8038387d,2026-05-27 14:37:22.331752,5308.59,India,Mobile,Bank Transfer,0.62,Under Review
+245876aa,2026-05-27 14:37:24.338692,1818.24,India,Desktop,ATM Withdrawal,0.92,Blocked
+28e88893,2026-05-27 14:37:26.341269,1837.27,China,Tablet,ATM Withdrawal,0.69,Under Review
+25c22f83,2026-05-27 14:37:28.350114,4553.21,USA,Desktop,ATM Withdrawal,0.64,Under Review
+b488fde2,2026-05-27 14:37:30.354239,6161.68,Germany,Desktop,POS Payment,0.72,Under Review
+9bedcb63,2026-05-27 14:37:32.362127,7288.83,China,Mobile,Online Purchase,0.91,Blocked
