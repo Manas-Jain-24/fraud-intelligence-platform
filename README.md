@@ -159,6 +159,10 @@ This project can be deployed easily using:
 - Railway
 - AWS
 
+## Live Demo
+
+🔗 Deployed Application: https://credit-card-fraud-detection-model-9ybjz9bdm26j32teww6mja.streamlit.app/
+
 ---
 
 # 📊 Dataset
