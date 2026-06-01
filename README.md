@@ -170,6 +170,17 @@ The dataset contains highly imbalanced transaction records used for fraud classi
 
 ---
 
+## Dataset Setup
+
+1. Download the dataset from Kaggle:
+   https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
+
+2. Place the file in:
+
+data/creditcard.csv
+
+---
+
 # 🔮 Future Improvements
 
 - SHAP Explainable AI integration
