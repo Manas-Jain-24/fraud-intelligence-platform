@@ -277,8 +277,9 @@ for run_i, seed in enumerate(SEEDS, 1):
     X_bal = np.vstack([X_f_aug, X_tr[samp_0]])
     y_bal = np.concatenate([np.ones(len(X_f_aug)), np.zeros(len(samp_0))])
     
-    # Standardize
-    mean, std = np.mean(X_bal, axis=0), np.std(X_bal, axis=0)
+    # Standardize strictly using unaugmented training partition statistics
+    mean = np.mean(X_tr, axis=0)
+    std = np.std(X_tr, axis=0)
     std[std == 0.0] = 1.0
     X_bal_norm = (X_bal - mean) / std
     X_te_norm = (X_te - mean) / std

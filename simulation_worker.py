@@ -247,8 +247,9 @@ def run_single_simulation(args):
     perm = np.random.permutation(len(y_bal))
     X_bal, y_bal, amt_bal = X_bal[perm], y_bal[perm], amt_bal[perm]
     
-    mean = np.mean(X_bal, axis=0)
-    std = np.std(X_bal, axis=0)
+    # Standardize strictly using unaugmented training partition statistics
+    mean = np.mean(X_tr, axis=0)
+    std = np.std(X_tr, axis=0)
     std[std == 0.0] = 1.0
     X_tr_n = (X_bal - mean) / std
     X_te_n = (X_te - mean) / std
