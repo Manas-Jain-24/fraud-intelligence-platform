@@ -1,210 +1,115 @@
-# 💳 AI-Powered Credit Card Fraud Detection & Intelligence Platform
+# 💳 Credit Card Fraud Detection — Machine Learning Project
 
-An end-to-end Machine Learning powered fraud detection system featuring real-time fraud analytics, transaction simulation, synthetic streaming pipelines, and an interactive intelligence dashboard built using Streamlit, XGBoost, and Scikit-learn.
+An academic project implementing an end-to-end Machine Learning pipeline for credit card fraud detection **from first principles** using pure **NumPy**, **Pandas**, and **Matplotlib**. 
 
----
-
-# 🚀 Features
-
-## 🔍 AI Fraud Detection
-- Machine Learning-based fraud classification
-- Real-time fraud risk scoring
-- Fraud probability analysis
-- Intelligent risk categorization
-
-## 📊 Fraud Analytics Dashboard
-- Fraud vs legitimate transaction analysis
-- Transaction amount visualization
-- Fraud distribution insights
-- Interactive charts using Plotly
-
-## 💳 Transaction Simulator
-- Simulate custom transactions
-- Real-time fraud prediction
-- Dynamic fraud risk gauge
-- Smart fraud rule engine
-
-## 🧠 Fraud Intelligence Center
-- Live transaction monitoring
-- Real-time fraud trends
-- Fraud timeline visualization
-- Suspicious transaction feed
-- Fraud heatmaps by country
-- Model confidence analytics
-- Live fraud spike alerts
-
-## ⚡ Streaming Transaction Engine
-- Synthetic real-time transaction generation
-- Dynamic fraud patterns
-- Continuous monitoring simulation
+Developed in strict compliance with subject evaluation criteria requiring algorithms to be implemented **from scratch without black-box ML library packages** (such as Scikit-Learn or XGBoost).
 
 ---
 
-# 🛠 Tech Stack
+## 📋 Evaluation Criteria Mapping
 
-- Python
-- Streamlit
-- Scikit-learn
-- XGBoost
-- Pandas
-- NumPy
-- Plotly
-- Joblib
-- Imbalanced-learn (SMOTE)
+This repository fulfills all 4 project evaluation requirements:
+
+| Component | Weight | Implementation Details in Repo |
+| :--- | :---: | :--- |
+| **2(a) Understanding the Theory** | 10% | Mathematical formulation of Binary Cross-Entropy (BCE) Loss, Sigmoid hypothesis, chain-rule analytical gradient derivations, and class imbalance mitigation in `notebooks/fraud_detection.ipynb` and `report/report.tex`. |
+| **2(b) Implementation from Scratch** | 20% | Full from-scratch algorithms implemented in pure NumPy without Scikit-learn/XGBoost (`LogisticRegressionScratch`, `StandardScalerScratch`, `undersample_dataset`, `train_test_split_scratch`, and scratch evaluation metrics). |
+| **2(c) Experimental Results** | 10% | Quantitative empirical evaluation on held-out test split: Loss convergence curve, Confusion Matrix, Precision, Recall, F1-Score, Trapezoidal ROC-AUC, and threshold sensitivity analysis. |
+| **2(d) Report Submission (LaTeX)** | 10% | Professional publication-quality LaTeX report (`report/report.tex`) featuring cover page, team details, date of submission, and individual contribution matrix. |
 
 ---
 
-# 📂 Project Structure
+## 📂 Project Structure
 
 ```bash
-credit-card-fraud-detection/
+Credit-Card-Fraud-Detection-Model/
 │
 ├── data/
+│   ├── creditcard.csv             # Kaggle dataset (place downloaded CSV here)
 │   └── live_transactions.csv
 │
-├── models/
-│   ├── fraud_model.pkl
-│   └── scaler.pkl
-│
 ├── notebooks/
-│   └── fraud_detection.ipynb
+│   └── fraud_detection.ipynb      # Complete academic notebook (Theory + Scratch Code + Visualizations)
 │
-├── app.py
-├── transaction_generator.py
-├── requirements.txt
-├── README.md
-└── .gitignore
+├── report/
+│   └── report.tex                 # Academic project report written in LaTeX
+│
+├── archive/                       # Archived web-app / simulator artifacts
+│   ├── app.py
+│   ├── transaction_generator.py
+│   └── models/
+│
+├── requirements.txt               # Pure Python dependencies (numpy, pandas, matplotlib)
+└── README.md
 ```
 
 ---
 
-# 📈 Machine Learning Workflow
+## ⚙️ Installation & Running the Notebook
 
-1. Data preprocessing
-2. Feature engineering
-3. Handling class imbalance using SMOTE
-4. Model training using:
-   - Random Forest
-   - XGBoost
-5. Cross-validation and evaluation
-6. Fraud probability optimization
-7. Real-time deployment with Streamlit
-
----
-
-# 🎯 Model Highlights
-
-- Optimized precision-recall tradeoff
-- Fraud-aware synthetic transaction engine
-- Real-time monitoring architecture
-- Interactive fraud intelligence dashboards
-- Dynamic risk visualization
-
----
-
-# ⚙ Installation
-
-## Clone Repository
-
+### 1. Set Up Python Environment
 ```bash
-git clone https://github.com/YOUR_USERNAME/credit-card-fraud-detection.git
-```
+# Clone the repository
+git clone https://github.com/kartik7115-edu/Credit-Card-Fraud-Detection-Model.git
+cd Credit-Card-Fraud-Detection-Model
 
-## Navigate to Project
-
-```bash
-cd credit-card-fraud-detection
-```
-
-## Create Virtual Environment
-
-```bash
+# Create and activate virtual environment
 python -m venv venv
-```
 
-## Activate Virtual Environment
-
-### Windows
-```bash
+# Windows
 venv\Scripts\activate
-```
 
-### Mac/Linux
-```bash
+# Mac/Linux
 source venv/bin/activate
-```
 
-## Install Dependencies
-
-```bash
+# Install required dependencies
 pip install -r requirements.txt
 ```
 
----
+### 2. Dataset Setup
+1. Download the dataset from [Kaggle: Credit Card Fraud Detection](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud).
+2. Place `creditcard.csv` in the `data/` folder:
+   ```
+   data/creditcard.csv
+   ```
+   *(Note: The notebook contains a fallback data generator so it can execute end-to-end even before the full 150MB CSV is downloaded).*
 
-# ▶ Run Application
-
+### 3. Launch the Jupyter Notebook
 ```bash
-streamlit run app.py
+jupyter notebook notebooks/fraud_detection.ipynb
 ```
 
 ---
 
-# 🌐 Deployment
+## 📄 Compiling the LaTeX Report
 
-This project can be deployed easily using:
+The report is written in standard LaTeX (`report/report.tex`) and can be compiled using any LaTeX distribution (TeX Live, MiKTeX, MacTeX) or online via **Overleaf**.
 
-- Streamlit Community Cloud
-- Render
-- Railway
-- AWS
-
-## Live Demo
-
-🔗 Deployed Application: https://credit-card-fraud-detection-model-9ybjz9bdm26j32teww6mja.streamlit.app/
+### Local Compilation via `pdflatex`:
+```bash
+cd report
+pdflatex report.tex
+pdflatex report.tex
+```
 
 ---
 
-# 📊 Dataset
+## 🧠 Key Theoretical Formulations Implemented
 
-Dataset used:
-- Kaggle Credit Card Fraud Detection Dataset
+1. **Hypothesis & Sigmoid Activation:**
+   $$\hat{y} = \sigma(\mathbf{w}^T \mathbf{x} + b) = \frac{1}{1 + e^{-(\mathbf{w}^T \mathbf{x} + b)}}$$
 
-The dataset contains highly imbalanced transaction records used for fraud classification and model training.
+2. **Binary Cross-Entropy Loss:**
+   $$\mathcal{L}(\mathbf{w}, b) = -\frac{1}{m} \sum_{i=1}^m \left[ y^{(i)} \ln(\hat{y}^{(i)}) + (1 - y^{(i)}) \ln(1 - \hat{y}^{(i)}) \right] + \frac{\lambda}{2m}\|\mathbf{w}\|_2^2$$
 
----
+3. **Analytical Gradients for Parameter Updates:**
+   $$\nabla_{\mathbf{w}} \mathcal{L} = \frac{1}{m} \mathbf{X}^T (\hat{\mathbf{y}} - \mathbf{y}) + \frac{\lambda}{m} \mathbf{w}$$
+   $$\frac{\partial \mathcal{L}}{\partial b} = \frac{1}{m} \sum_{i=1}^m (\hat{y}^{(i)} - y^{(i)})$$
 
-## Dataset Setup
-
-1. Download the dataset from Kaggle:
-   https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
-
-2. Place the file in:
-
-data/creditcard.csv
+4. **Composite Trapezoidal ROC-AUC Quadrature:**
+   $$\text{AUC} = \sum_{k=1}^{K-1} \frac{\text{TPR}_k + \text{TPR}_{k+1}}{2} \cdot (\text{FPR}_{k+1} - \text{FPR}_k)$$
 
 ---
 
-# 🔮 Future Improvements
-
-- SHAP Explainable AI integration
-- Kafka real-time streaming
-- Database integration
-- Multi-model ensemble scoring
-- User authentication
-- Cloud-native deployment
-- Real banking API integration
-
----
-
-# 👨‍💻 Author
-
-Kartik Kumthe
-
-Aspiring Data Scientist | AI & ML Engineer
-
----
-
-# ⭐ If You Like This Project
-
-Give this repository a star and connect on LinkedIn.
+## 👥 Authors & Academic Contribution
+Refer to `report/report.tex` (Title Page & Section 6) for group details and individual contribution breakdown.
