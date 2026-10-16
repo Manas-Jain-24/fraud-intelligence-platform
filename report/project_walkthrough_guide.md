@@ -278,7 +278,7 @@ Commercial networks (VisaNet, Mastercard Banknet) mandate strict transaction sco
 | [**`benchmark_100_runs_summary.csv`**](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/benchmark_100_runs_summary.csv) | CSV Dataset (11 KB) | Statistical aggregates: Mean, StdDev, 95% CI Margin, Median, IQR, Min, Max. |
 | [**`benchmark_100_runs_statistical_breakdown.csv`**](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/benchmark_100_runs_statistical_breakdown.csv) | CSV Dataset (12 KB) | Granular metric-by-metric distributions across all models and evaluation metrics. |
 | [**`generate_pdf_report.py`**](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/generate_pdf_report.py) | Report Compiler | Automated ReportLab compilation script generating the publication-grade monograph. |
-| [**`report/Credit_Card_Fraud_Detection_Comprehensive_Guide.pdf`**](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/report/Credit_Card_Fraud_Detection_Comprehensive_Guide.pdf) | PDF Publication | 7-page publication-grade PDF report compiled with running headers, footers, and two-pass page numbering. |
+| [**`report/Credit_Card_Fraud_Detection_Comprehensive_Guide.pdf`**](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/report/Credit_Card_Fraud_Detection_Comprehensive_Guide.pdf) | PDF Publication | 20-page authoritative research monograph compiled with running headers, footers, and two-pass page numbering. |
 
 ---
 
