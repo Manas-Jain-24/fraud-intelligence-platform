@@ -161,8 +161,10 @@ All models and sampling routines were authored strictly from mathematical first 
 * **Notebook:** [`notebooks/step9_focal_loss_scratch.ipynb`](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/notebooks/step9_focal_loss_scratch.ipynb)
 * **Objective:** Prevent overwhelmingly easy genuine transactions from dominating backpropagation gradients.
 * **Mathematical Formulation:** $\mathcal{L}_{\text{FL}}(p_t) = -\alpha_t (1 - p_t)^\gamma \ln(p_t)$, setting $\gamma = 2.0$. For well-classified genuine records ($p_t = 0.99$), modulating factor $(1 - 0.99)^2 = 0.0001$ suppresses gradient magnitude by $10,000\times$.
-* **NumPy Implementation:** Analytical focal loss gradient vectorization: $\nabla_W = \frac{1}{N}X^T ((1-p_t)^\gamma (p - y))$.
-* **Limitations:** Sensitive to hyperparameter selection $(\alpha, \gamma)$; can slow convergence in early training epochs.
+  The analytical derivative with respect to logit $z$ is derived via the chain rule as:
+  $$\frac{\partial \mathcal{L}_{\text{FL}}}{\partial z} = \alpha_t (1 - p_t)^\gamma \left[ (p - y) + \gamma p_t \ln(p_t) (2y - 1) \right] = \begin{cases} \alpha (1-p)^\gamma \left[(p - 1) + \gamma p \ln(p)\right] & \text{if } y = 1 \\ (1-\alpha) p^\gamma \left[p - \gamma (1-p) \ln(1-p)\right] & \text{if } y = 0 \end{cases}$$
+* **NumPy Implementation Audit:** Verified against `step9_focal_loss_scratch.ipynb`. The scratch code already executes these exact derived expressions (`self.gamma * yh1 * np.log(yh1) + yh1 - 1.0` for positives and `-self.gamma * (1.0 - yh0) * np.log(1.0 - yh0) + yh0` for negatives).
+* **Limitations:** Sensitive to hyperparameter selection $(\alpha, \gamma)$; setting $\gamma > 3.0$ over-suppresses semi-hard negatives, slowing convergence.
 
 ### Step 10: Stacked Generalization with Out-of-Fold Meta-Learning
 * **Notebook:** [`notebooks/step10_stacked_generalization_scratch.ipynb`](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/notebooks/step10_stacked_generalization_scratch.ipynb)
@@ -190,14 +192,15 @@ meta_model = StackingMetaClassifierScratch().fit(Z_train_oof, y_bal)
 
 ## 4. Experimental Design and Benchmark Results
 
-### 4.1 Simulation Design & Uncertainty Quantification
+### 4.1 Simulation Design & Split-to-Split Variability
 Evaluating an imbalanced fraud model on a single 80/20 train/test split is subject to sampling variance. To quantify estimator stability, we conducted a **100-run Monte Carlo simulation ($N = 100$)**. In each run $k \in \{1000, \dots, 1099\}$, the entire dataset was partitioned via a fresh stratified 80/20 split, all seven model architectures were trained from scratch, and test metrics were logged.
 
-We report sample mean $\bar{x}$, sample standard deviation $s$, and the 95% Confidence Interval half-width for the mean:
-$$\text{Margin} = 1.96 \cdot \frac{s}{\sqrt{N}} = 0.196 \cdot s$$
+We report sample mean $\bar{\theta}_m$, sample standard deviation $s_m$, and the nominal dispersion interval:
+$$\text{Margin} = 1.96 \cdot \frac{s_m}{\sqrt{N}} = 0.196 \cdot s_m$$
 
-> [!NOTE]
-> **Interpretation Caveat:** These confidence intervals quantify uncertainty in the estimated mean performance across repeated random splits of this historical dataset. They do NOT imply that sampling variance is eliminated, nor do they guarantee identical performance on future non-stationary data.
+> [!IMPORTANT]
+> **Statistical Interpretation (Dietterich, 1998; Bengio & Grandvalet, 2004):**
+> Because all 100 repeated random splits draw from the **same finite underlying pool of 492 fraud cases**, the partitions are not statistically independent draws from an infinite superpopulation. Cross-partition estimates are positively correlated due to shared instances. Consequently, these intervals represent **measures of split-to-split empirical variability and partition sensitivity** for this historical dataset, rather than independent sampling confidence intervals or guarantees of performance on future non-stationary transactions.
 
 ### 4.2 Master 100-Run Benchmark Summary ($N = 100$, $\text{Mean} \pm 95\%\text{ CI Margin}$)
 
@@ -213,21 +216,34 @@ $$\text{Margin} = 1.96 \cdot \frac{s}{\sqrt{N}} = 0.196 \cdot s$$
 
 ### 4.3 Critical Operational Trade-Off Analysis & Full Arithmetic Audit
 * **The False-Alarm Penalty:** Cost-Sensitive Logistic Regression attains the highest recall (93.81%), missing only \$926.36 in fraud. However, this comes at an extreme operational penalty: **7,854.0 false positives (13.81% FPR)**. Under a baseline review cost of \$2.50 per alert, investigation overhead amounts to \$19,635.00, elevating total operational loss to **\$20,561.36 per split**.
-* **Cost-Effective Champions:** Baseline Logistic Regression and GBDT exhibit far superior total cost profiles (\$3,967.70 and \$4,521.79 total loss, respectively). By restricting false alarms to 518.3 and 892.7, they prevent operational team saturation while preserving ~80% of stolen capital.
-* **Reconciliation of Step 10 Notebook vs. 100-Run Table:** In the single-split Step 10 notebook (Seed 42), the stacked meta-learner was coupled with instance-dependent dynamic thresholding ($p^*(x)$), yielding 42.16% precision and 118 false alarms. In contrast, the 100-run simulation evaluated the stacked meta-learner under standard fixed thresholding ($p=0.50$) to ensure controlled benchmark parity across all models.
+* **Cost-Effective Champions:** Baseline Logistic Regression and GBDT exhibit far superior total cost profiles (\$3,967.70 and \$4,521.74 total loss, respectively). By restricting false alarms to 518.3 and 892.7, they prevent operational team saturation while preserving ~80% of stolen capital.
 
-#### Table 4.2: Master Arithmetic Reconciliation Audit Across All Seven Models ($C_{\text{FP}} = \$2.50$)
-Every model's reported operational loss reconciles with mathematical precision:
+#### Table 4.2: Master Arithmetic Reconciliation Audit Across All Seven Models ($C_{\text{FP}} = \$2.50$, Unrounded Underlying Values)
+Every model's reported operational loss reconciles with exact mathematical precision:
 
 | Model Architecture | Mean False Pos ($\bar{\text{FP}}$) | Alert Cost ($\bar{\text{FP}} \times \$2.50$) | Missed Fraud ($\bar{\text{FN}}_{\$}$) | Total Calculated Loss | Table 4.1 Master Benchmark | Audit Status |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1. Baseline LogReg** | 518.3 | \$1,295.75 | \$2,671.95 | **\$3,967.70** | \$3,968 ± \$275 | **Exact Match** |
-| **2. Cost-Sensitive LogReg** | 7,854.0 | \$19,635.00 | \$926.36 | **\$20,561.36** | \$20,561 ± \$508 | **Exact Match** |
-| **3. Neural Net (MLP)** | 1,682.8 | \$4,207.00 | \$1,961.61 | **\$6,168.61** | \$6,169 ± \$270 | **Exact Match** |
-| **4. GBDT Classifier** | 892.7 | \$2,231.75 | \$2,290.04 | **\$4,521.79** | \$4,522 ± \$272 | **Exact Match** |
-| **5. Isolation Forest** (Unsup.) | 673.0 | \$1,682.50 | \$5,370.04 | **\$7,052.54** | \$7,053 ± \$410 | **Exact Match** |
-| **6. Soft-Voting Ensemble** | 1,299.3 | \$3,248.25 | \$1,944.26 | **\$5,192.51** | \$5,192 ± \$240 | **Exact Match** |
-| **7. Stacked Meta-Learner** | 1,880.5 | \$4,701.25 | \$1,781.23 | **\$6,482.48** | \$6,482 ± \$230 | **Exact Match** |
+| **1. Baseline LogReg** | 518.3 | \$1,295.80 | \$2,671.90 | **\$3,967.70** | \$3,968 ± \$275 | **Exact Match** |
+| **2. Cost-Sensitive LogReg** | 7,854.0 | \$19,634.98 | \$926.39 | **\$20,561.36** | \$20,561 ± \$508 | **Exact Match** |
+| **3. Neural Net (MLP)** | 1,682.8 | \$4,207.13 | \$1,961.48 | **\$6,168.61** | \$6,169 ± \$270 | **Exact Match** |
+| **4. GBDT Classifier** | 892.7 | \$2,231.70 | \$2,290.04 | **\$4,521.74** | \$4,522 ± \$272 | **Exact Match** |
+| **5. Isolation Forest** (Unsup.) | 673.0 | \$1,682.63 | \$5,369.92 | **\$7,052.54** | \$7,053 ± \$410 | **Exact Match** |
+| **6. Soft-Voting Ensemble** | 1,299.3 | \$3,248.15 | \$1,943.76 | **\$5,191.91** | \$5,192 ± \$240 | **Exact Match** |
+| **7. Stacked Meta-Learner** | 1,880.5 | \$4,701.38 | \$1,781.11 | **\$6,482.48** | \$6,482 ± \$230 | **Exact Match** |
+
+#### Table 4.3: Controlled Paired Evaluation: Fixed vs. Tuned Thresholding on Identical Held-Out Transactions
+To eliminate sample confounding when comparing threshold strategies, both decision rules are evaluated on the **exact same held-out test transactions** (Seed 42; $N = 56,961$ transactions, 98 fraud cases, \$10,504.99 fraud volume):
+
+| Model Architecture & Strategy | Decision Threshold | Count Recall (%) | Precision (%) | False Positives | Missed Fraud (\$) | Total Net Loss (\$) | Experimental Control |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Soft-Voting Ensemble (Fixed)** | $p \ge 0.50$ | 90.82% | 4.66% | 1,819 | \$419.90 | \$4,967.40 | **Identical Held-Out Split** |
+| **Soft-Voting Ensemble (Tuned)** | $\tau = 0.83$ | 88.78% | **39.91%** | **131** (-92.8%) | \$750.66 | **\$1,078.16** (-78.3%) | **Identical Held-Out Split** |
+| **GBDT Classifier (Fixed)** | $p \ge 0.50$ | 90.82% | 8.27% | 987 | \$419.90 | \$2,887.40 | **Identical Held-Out Split** |
+| **GBDT Classifier (Tuned)** | $\tau = 0.83$ | 85.71% | **59.57%** | **57** (-94.2%) | \$782.98 | **\$925.48** (-68.0%) | **Identical Held-Out Split** |
+| **Baseline LogReg (Fixed)** | $p \ge 0.50$ | 91.84% | 5.20% | 1,640 | \$414.81 | \$4,514.81 | **Identical Held-Out Split** |
+| **Baseline LogReg (Tuned)** | $\tau = 0.83$ | 88.78% | 18.63% | **380** (-76.8%) | \$750.66 | **\$1,700.66** (-62.3%) | **Identical Held-Out Split** |
+
+**Synthesis:** Holding test instances strictly constant establishes that threshold tuning reduces false alarms by **76% to 94%** and cuts net losses by 62% to 78% on the exact same transactions, proving that precision improvements stem from decision boundary calibration rather than sample partitioning.
 
 ---
 
@@ -269,13 +285,13 @@ Because actual operational overhead varies widely across institutions (e.g., aut
 ### 5.4 Consistency Verification & Breakeven Analysis
 **Rigorous Consistency Verification:** A key finding in Table 5.1 is that **Soft-Voting Ensemble minimizes loss (\$2,593.39) when $C_{\text{FP}} \le \$0.50$**, while **Baseline Logistic Regression minimizes loss (\$3,967.70) when $C_{\text{FP}} \ge \$2.50$**. This ranking shift is verified against the **exact same cost formula, model predictions, and test splits ($p = 0.50$ fixed cutoff)**:
 * Each model's total cost is a straight line: $\mathcal{L}(C_{\text{FP}}) = \bar{\text{FP}} \cdot C_{\text{FP}} + \bar{\text{FN}}_{\$}$, where slope is false-positive count $\bar{\text{FP}}$ and y-intercept is unpenalized missed fraud loss $\bar{\text{FN}}_{\$}$.
-* Soft-Voting catches \$727.69 more fraud than Baseline LogReg (\$1,944.26 missed vs \$2,671.95), giving it a lower y-intercept. However, Soft-Voting produces 781.0 more false positives (1,299.3 vs 518.3), giving it a steeper slope.
-* At $C_{\text{FP}} = \$0.50$, the cost of those 781.0 extra false alarms is only $781.0 \times \$0.50 = \$390.50$. Because fraud savings (\$727.69) exceed alert costs (\$390.50), Soft-Voting has a net financial advantage of **+\$337.19** over Baseline LogReg!
+* Soft-Voting catches \$728.14 more fraud than Baseline LogReg (\$1,943.76 missed vs \$2,671.90), giving it a lower y-intercept. However, Soft-Voting produces 780.94 more false positives (1,299.26 vs 518.32), giving it a steeper slope.
+* At $C_{\text{FP}} = \$0.50$, the cost of those 780.94 extra false alarms is only $780.94 \times \$0.50 = \$390.47$. Because fraud savings (\$728.14) exceed alert costs (\$390.47), Soft-Voting has a net financial advantage of **+\$337.67** over Baseline LogReg!
 * By equating the two cost lines, we analytically solve for the **exact breakeven cost** $C_{\text{FP}}^*$:
-  $$C_{\text{FP}}^* = \frac{\bar{\text{FN}}_{\$, A} - \bar{\text{FN}}_{\$, B}}{\bar{\text{FP}}_B - \bar{\text{FP}}_A} = \frac{\$2,671.95 - \$1,944.26}{1,299.3 - 518.3} = \frac{\$727.69}{781.0} = \mathbf{\$0.9317}$$
-  * For $C_{\text{FP}} < \$0.9317$, Soft-Voting minimizes loss under the exact same fixed cutoff ($p = 0.50$); above \$0.9317, Baseline LogReg wins.
-  * For GBDT vs. Baseline LogReg: $C_{\text{FP}}^* = \frac{\$2,671.95 - \$2,290.04}{892.7 - 518.3} = \frac{\$381.91}{374.4} = \mathbf{\$1.0201}$.
-  * For Cost-Sensitive LogReg vs. Baseline LogReg: $C_{\text{FP}}^* = \frac{\$2,671.95 - \$926.36}{7,854.0 - 518.3} = \frac{\$1,745.59}{7,335.7} = \mathbf{\$0.2380}$.
+  $$C_{\text{FP}}^* = \frac{\bar{\text{FN}}_{\$, A} - \bar{\text{FN}}_{\$, B}}{\bar{\text{FP}}_B - \bar{\text{FP}}_A} = \frac{\$2,671.90 - \$1,943.76}{1,299.26 - 518.32} = \frac{\$728.14}{780.94} = \mathbf{\$0.9324}$$
+  * For $C_{\text{FP}} < \$0.9324$, Soft-Voting minimizes loss under the exact same fixed cutoff ($p = 0.50$); above \$0.9324, Baseline LogReg wins.
+  * For GBDT vs. Baseline LogReg: $C_{\text{FP}}^* = \frac{\$2,671.90 - \$2,290.04}{892.68 - 518.32} = \frac{\$381.86}{374.36} = \mathbf{\$1.0200}$.
+  * For Cost-Sensitive LogReg vs. Baseline LogReg: $C_{\text{FP}}^* = \frac{\$2,671.90 - \$926.39}{7,853.99 - 518.32} = \frac{\$1,745.51}{7,335.67} = \mathbf{\$0.2380}$.
 
 **Fixed vs. Dynamic Thresholding Paradigm:** Under fixed thresholding ($p = 0.50$), rankings shift along linear cost frontiers as slopes trade off against intercepts. Under dynamic Bayesian thresholding ($p^*(x) = \frac{C_{\text{FP}}}{C_{\text{FP}} + \text{Amount}(x)}$), changing $C_{\text{FP}}$ directly shifts the probability cutoff curve, classifying more transactions as fraud when $C_{\text{FP}}$ is low. Both paradigms lead to the same operational conclusion: low-cost automated channels favor aggressive fraud capture (Soft-Voting), while expensive manual review demands strict false-alarm suppression (Baseline LogReg).
 
@@ -317,6 +333,8 @@ Commercial networks (VisaNet, Mastercard Banknet) mandate strict transaction sco
 9. **Davis, J., & Goadrich, M. (2006).** "The relationship between Precision-Recall and ROC curves." *International Conference on Machine Learning (ICML)*, 233–240. [DOI: 10.1145/1143844.1143874](https://doi.org/10.1145/1143844.1143874).
 10. **LexisNexis Risk Solutions. (2023).** "2023 True Cost of Fraud Study: Financial Services and Lending." Global Financial Fraud Report.
 11. **United States Code of Federal Regulations.** 12 CFR Part 1005 (Regulation E) — Electronic Fund Transfers. Consumer Financial Protection Bureau (CFPB).
+12. **Dietterich, T. G. (1998).** "Approximate statistical tests for comparing supervised classification learning algorithms." *Neural Computation*, 10(7), 1895–1923.
+13. **Bengio, Y., & Grandvalet, Y. (2004).** "No unbiased estimator of the variance of K-fold cross-validation." *Journal of Machine Learning Research (JMLR)*, 5, 1089–1105.
 
 ### 7.2 Environment and Execution Instructions
 * **Hardware / Runtime:** Python 3.13 / Windows 11 x64, 12 Logical CPU Cores, 16 GB RAM.

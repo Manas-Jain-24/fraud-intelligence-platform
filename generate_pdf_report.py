@@ -981,16 +981,17 @@ def build_pdf_monograph():
         "With focusing parameter $\\gamma = 2.0$ and balancing factor $\\alpha = 0.25$:<br/>"
         "• For an easily classified genuine sample ($p_t = 0.99$), modulating factor is $(1 - 0.99)^2 = 0.0001$, suppressing loss and gradient by <b>10,000×</b>.<br/>"
         "• For a misclassified fraud sample ($p_t = 0.10$), modulating factor is $(1 - 0.10)^2 = 0.81$, preserving 81% of gradient magnitude.<br/>"
-        "The analytical gradient with respect to logit $z$ is derived as:",
+        "The analytical gradient with respect to logit $z$ is derived via the chain rule as:",
         body
     ))
     story.append(Paragraph(
-        "$$\\frac{\\partial \\mathcal{L}_{\\text{FL}}}{\\partial z} = \\alpha_t (1 - p_t)^\\gamma \\left(p - y + \\gamma p_t \\ln(p_t) (1 - 2y)\\right)$$",
+        "$$\\frac{\\partial \\mathcal{L}_{\\text{FL}}}{\\partial z} = \\alpha_t (1 - p_t)^\\gamma \\left( (p - y) + \\gamma p_t \\ln(p_t) (2y - 1) \\right) = \\begin{cases} \\alpha (1-p)^\\gamma \\left[(p - 1) + \\gamma p \\ln(p)\\right] & \\text{if } y = 1 \\\\ (1-\\alpha) p^\\gamma \\left[p - \\gamma (1-p) \\ln(1-p)\\right] & \\text{if } y = 0 \\end{cases}$$",
         math_block
     ))
     story.append(Paragraph(
-        "<b>Pure NumPy Implementation Details:</b> Analytical vector gradients implemented directly in matrix operations, clipping probabilities at $10^{-15}$ "
-        "to prevent $\\ln(0)$ numerical underflow.<br/>"
+        "<b>Pure NumPy Implementation Audit:</b> Verified against `Step9_Focal_Loss.ipynb`. The scratch implementation executes these exact derived "
+        "expressions (`self.gamma * yh1 * np.log(yh1) + yh1 - 1.0` for positives and `-self.gamma * (1.0 - yh0) * np.log(1.0 - yh0) + yh0` for negatives), "
+        "clipping probabilities at $10^{-15}$ to ensure numerical stability.<br/>"
         "<b>Theoretical Limitations:</b> Highly sensitive to the choice of $\\gamma$; setting $\\gamma > 3.0$ over-suppresses semi-hard negatives, slowing convergence.",
         body
     ))
@@ -1154,9 +1155,9 @@ def build_pdf_monograph():
         body
     ))
 
-    story.append(Paragraph("4.2 Central Limit Theorem & Confidence Interval Formulation", subsec_heading))
+    story.append(Paragraph("4.2 Split-to-Split Variability & Resampling Dispersion Formulation", subsec_heading))
     story.append(Paragraph(
-        "Let $\\theta_{k,m}$ denote the empirical metric (e.g., recall, precision, total cost) observed for model $m$ on run $k \\in \\{1, \\dots, N\\}$ with $N = 100$. "
+        "Let $\\theta_{k,m}$ denote the empirical metric observed for model $m$ on partition $k \\in \\{1, \\dots, N\\}$ ($N = 100$). "
         "We compute the sample mean $\\bar{\\theta}_m$ and sample standard deviation $s_m$:",
         body
     ))
@@ -1165,20 +1166,15 @@ def build_pdf_monograph():
         math_block
     ))
     story.append(Paragraph(
-        "Under the <b>Central Limit Theorem (CLT)</b>, because $N = 100 \\ge 30$ and the random partitions are generated independently, the distribution "
-        "of the sample mean $\\bar{\\theta}_m$ converges to a normal distribution: $\\bar{\\theta}_m \\sim \\mathcal{N}\\left(\\mu_m, \\frac{\\sigma_m^2}{N}\\right)$. "
-        "The two-sided 95% Confidence Interval for the population mean $\\mu_m$ is given by:",
-        body
-    ))
-    story.append(Paragraph(
-        "$$\\text{CI}_{95\\%} = \\bar{\\theta}_m \\pm z_{0.975} \\frac{s_m}{\\sqrt{N}} = \\bar{\\theta}_m \\pm 1.960 \\times \\frac{s_m}{\\sqrt{100}} = \\bar{\\theta}_m \\pm 0.196 \\times s_m$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "<b>Critical Statistical Caveat on Interpretation:</b> These confidence intervals quantify the precision of our estimated mean performance "
-        "across repeated random partitions of <i>this specific historical dataset</i>. They reduce estimator variance, but they do <b>NOT</b> eliminate "
-        "epistemic uncertainty or prove that these models will generalize identically to future transactions subject to temporal non-stationarity, "
-        "macroeconomic shifts, or adversarial fraud mutation.",
+        "To summarize dispersion across the 100 random splits, we compute the nominal interval "
+        "$\\bar{\\theta}_m \\pm z_{0.975} \\frac{s_m}{\\sqrt{N}} = \\bar{\\theta}_m \\pm 0.196 \\cdot s_m$. "
+        "However, this interval requires <b>rigorous statistical interpretation</b> (Dietterich, 1998; Bengio & Grandvalet, 2004):<br/>"
+        "• <b>Non-Independence of Repeated Partitions:</b> Although the 100 random seeds generate different 80/20 train/test partitions, all splits draw from "
+        "the <i>exact same underlying pool of 492 fraud cases</i>. Because test sets share identical observations across runs, the resulting estimates are "
+        "positively correlated, violating the mutual independence assumption required for standard inferential confidence intervals.<br/>"
+        "• <b>Measures of Partition Sensitivity, Not Future Guarantees:</b> Consequently, these intervals represent <b>split-to-split empirical variability</b>—quantifying "
+        "how sensitive each algorithm is to particular random data partitions. They do <b>NOT</b> constitute proof of performance on future unseen transactions, "
+        "nor do they eliminate epistemic risk arising from non-stationary fraud concept drift.",
         body
     ))
 
@@ -1356,11 +1352,11 @@ def build_pdf_monograph():
     story.append(Paragraph("4.5 The 'Recall Fallacy' & Full Arithmetic Cost Audit Across All Models", subsec_heading))
     story.append(Paragraph(
         "A foundational principle established in this benchmark is that <b>maximizing event recall does not minimize financial loss</b>. "
-        "Cost-Sensitive Logistic Regression attains an outstanding event recall of <b>93.81%</b> and dollar recall of <b>92.89%</b> (missing only $926.36 in fraud). "
+        "Cost-Sensitive Logistic Regression attains an outstanding event recall of <b>93.81%</b> and dollar recall of <b>92.89%</b> (missing only $926.39 in fraud). "
         "However, it generates <b>7,854.0 false positives per test split</b> (13.81% FPR). At $2.50 per review, investigating these false alarms costs "
-        "$19,635.00, pushing total loss to $20,561.36. In contrast, Baseline Logistic Regression produces only 518.3 false positives ($1,295.75 review cost) "
-        "and misses $2,671.95, yielding a total operational loss of only $3,967.70—over <b>5× lower</b> than Cost-Sensitive LogReg.<br/>"
-        "To guarantee complete mathematical integrity, Table 4.2 provides an explicit arithmetic reconciliation audit across all seven models:",
+        "$19,634.98, pushing total loss to $20,561.36. In contrast, Baseline Logistic Regression produces only 518.3 false positives ($1,295.80 review cost) "
+        "and misses $2,671.90, yielding a total operational loss of only $3,967.70—over <b>5× lower</b> than Cost-Sensitive LogReg.<br/>"
+        "To guarantee complete mathematical integrity, Table 4.2 provides an unrounded arithmetic reconciliation audit across all seven models:",
         body
     ))
 
@@ -1378,56 +1374,56 @@ def build_pdf_monograph():
     audit_rows = [
         [Paragraph("<b>1. Baseline LogReg</b>", tbl_cell_bold),
          Paragraph("518.3", tbl_cell_center),
-         Paragraph("$1,295.75", tbl_cell_right),
-         Paragraph("$2,671.95", tbl_cell_right),
+         Paragraph("$1,295.80", tbl_cell_right),
+         Paragraph("$2,671.90", tbl_cell_right),
          Paragraph("<b>$3,967.70</b>", tbl_cell_bold_right),
          Paragraph("$3,968 ± $275", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>2. Cost-Sensitive LogReg</b>", tbl_cell_bold),
          Paragraph("7,854.0", tbl_cell_center),
-         Paragraph("$19,635.00", tbl_cell_right),
-         Paragraph("$926.36", tbl_cell_right),
+         Paragraph("$19,634.98", tbl_cell_right),
+         Paragraph("$926.39", tbl_cell_right),
          Paragraph("<b>$20,561.36</b>", tbl_cell_bold_right),
          Paragraph("$20,561 ± $508", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>3. Neural Net (MLP)</b>", tbl_cell_bold),
          Paragraph("1,682.8", tbl_cell_center),
-         Paragraph("$4,207.00", tbl_cell_right),
-         Paragraph("$1,961.61", tbl_cell_right),
+         Paragraph("$4,207.13", tbl_cell_right),
+         Paragraph("$1,961.48", tbl_cell_right),
          Paragraph("<b>$6,168.61</b>", tbl_cell_bold_right),
          Paragraph("$6,169 ± $270", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>4. GBDT Classifier</b>", tbl_cell_bold),
          Paragraph("892.7", tbl_cell_center),
-         Paragraph("$2,231.75", tbl_cell_right),
+         Paragraph("$2,231.70", tbl_cell_right),
          Paragraph("$2,290.04", tbl_cell_right),
-         Paragraph("<b>$4,521.79</b>", tbl_cell_bold_right),
+         Paragraph("<b>$4,521.74</b>", tbl_cell_bold_right),
          Paragraph("$4,522 ± $272", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>5. Isolation Forest</b> (Unsup.)", tbl_cell_bold),
          Paragraph("673.0", tbl_cell_center),
-         Paragraph("$1,682.50", tbl_cell_right),
-         Paragraph("$5,370.04", tbl_cell_right),
+         Paragraph("$1,682.63", tbl_cell_right),
+         Paragraph("$5,369.92", tbl_cell_right),
          Paragraph("<b>$7,052.54</b>", tbl_cell_bold_right),
          Paragraph("$7,053 ± $410", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>6. Soft-Voting Ensemble</b>", tbl_cell_bold),
          Paragraph("1,299.3", tbl_cell_center),
-         Paragraph("$3,248.25", tbl_cell_right),
-         Paragraph("$1,944.26", tbl_cell_right),
-         Paragraph("<b>$5,192.51</b>", tbl_cell_bold_right),
+         Paragraph("$3,248.15", tbl_cell_right),
+         Paragraph("$1,943.76", tbl_cell_right),
+         Paragraph("<b>$5,191.91</b>", tbl_cell_bold_right),
          Paragraph("$5,192 ± $240", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>7. Stacked Meta-Learner</b>", tbl_cell_bold),
          Paragraph("1,880.5", tbl_cell_center),
-         Paragraph("$4,701.25", tbl_cell_right),
-         Paragraph("$1,781.23", tbl_cell_right),
+         Paragraph("$4,701.38", tbl_cell_right),
+         Paragraph("$1,781.11", tbl_cell_right),
          Paragraph("<b>$6,482.48</b>", tbl_cell_bold_right),
          Paragraph("$6,482 ± $230", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)]
@@ -1438,59 +1434,95 @@ def build_pdf_monograph():
         ('BACKGROUND', (0,0), (-1,0), c_primary),
         ('BOX', (0,0), (-1,-1), 1, c_border),
         ('INNERGRID', (0,0), (-1,-1), 0.5, c_border),
-        ('PADDING', (0,0), (-1,-1), 2.5),
+        ('PADDING', (0,0), (-1,-1), 2.2),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_highlight]),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(t_audit)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3))
 
-    story.append(Paragraph("4.6 Reconciliation of Step 10 Notebook vs. 100-Run Benchmark", subsec_heading))
+    story.append(Paragraph("4.6 Controlled Paired Evaluation: Fixed vs. Tuned Thresholding on Identical Test Split", subsec_heading))
     story.append(Paragraph(
-        "A key observation from review concerns the numerical variance between the single-split Step 10 notebook "
-        "(42.16% precision, 85.71% recall, 118 false positives on Seed 42) and the 100-run simulation table "
-        "(4.57% precision, 90.34% recall, 1,880.5 false positives). "
-        "This divergence is driven entirely by the <b>decision thresholding methodology</b>:",
+        "To evaluate threshold strategies without sample confounding, we execute a strictly controlled paired experiment "
+        "on the <b>identical held-out test split</b> (Seed 42; $N = 56,961$ transactions, 98 fraud cases, $10,504.99 fraud exposure). "
+        "Holding test instances strictly invariant isolates the true causal impact of threshold tuning:",
         body
     ))
 
-    # Reconciliation Table
+    # Controlled Paired Reconciliation Table (540 pt width)
     rec_headers = [
-        Paragraph("<b>Experimental Setting</b>", tbl_header),
-        Paragraph("<b>Threshold Strategy</b>", tbl_header),
+        Paragraph("<b>Model Architecture</b>", tbl_header),
+        Paragraph("<b>Decision Rule</b>", tbl_header),
         Paragraph("<b>Recall</b>", tbl_header),
         Paragraph("<b>Precision</b>", tbl_header),
-        Paragraph("<b>False Positives</b>", tbl_header),
-        Paragraph("<b>Operational Context</b>", tbl_header)
+        Paragraph("<b>False Pos.</b>", tbl_header),
+        Paragraph("<b>Net Loss ($)</b>", tbl_header),
+        Paragraph("<b>Experimental Control</b>", tbl_header)
     ]
     rec_rows = [
-        [Paragraph("<b>Step 10 Notebook</b><br/>(Single Seed 42)", tbl_cell_bold),
-         Paragraph("<b>Dynamic Bayesian</b><br/>p*(x) = 2.50/(2.50+Amt)", tbl_cell_center),
+        [Paragraph("<b>Soft-Voting Ensemble</b> (Fixed)", tbl_cell_bold),
+         Paragraph("Fixed $p \\ge 0.50$", tbl_cell_center),
+         Paragraph("90.82%", tbl_cell_center),
+         Paragraph("4.66%", tbl_cell_center),
+         Paragraph("1,819", tbl_cell_center),
+         Paragraph("$4,967.40", tbl_cell_right),
+         Paragraph("Identical Held-Out Split", tbl_cell_center)],
+
+        [Paragraph("<b>Soft-Voting Ensemble</b> (Tuned)", tbl_cell_bold),
+         Paragraph("Tuned $\\tau = 0.83$", tbl_cell_center),
+         Paragraph("88.78%", tbl_cell_center),
+         Paragraph("<b>39.91%</b>", tbl_cell_bold_center),
+         Paragraph("<b>131</b>", tbl_cell_bold_center),
+         Paragraph("<b>$1,078.16</b>", tbl_cell_bold_right),
+         Paragraph("Identical Held-Out Split", tbl_cell_center)],
+
+        [Paragraph("<b>GBDT Classifier</b> (Fixed)", tbl_cell_bold),
+         Paragraph("Fixed $p \\ge 0.50$", tbl_cell_center),
+         Paragraph("90.82%", tbl_cell_center),
+         Paragraph("8.27%", tbl_cell_center),
+         Paragraph("987", tbl_cell_center),
+         Paragraph("$2,887.40", tbl_cell_right),
+         Paragraph("Identical Held-Out Split", tbl_cell_center)],
+
+        [Paragraph("<b>GBDT Classifier</b> (Tuned)", tbl_cell_bold),
+         Paragraph("Tuned $\\tau = 0.83$", tbl_cell_center),
          Paragraph("85.71%", tbl_cell_center),
-         Paragraph("<b>42.16%</b>", tbl_cell_bold_center),
-         Paragraph("<b>118.0</b>", tbl_cell_bold_center),
-         Paragraph("Demonstrates instance-dependent risk optimization; low-dollar charges require high confidence.", tbl_cell)],
-        [Paragraph("<b>100-Run Benchmark</b><br/>(Monte Carlo Seeds 1000–1099)", tbl_cell_bold),
-         Paragraph("<b>Standard Fixed</b><br/>p = 0.50 cutoff", tbl_cell_center),
-         Paragraph("<b>90.34%</b>", tbl_cell_bold_center),
-         Paragraph("4.57%", tbl_cell_center),
-         Paragraph("1,880.5", tbl_cell_center),
-         Paragraph("Standardized controlled comparison across all 7 models without confounding threshold effects.", tbl_cell)]
+         Paragraph("<b>59.57%</b>", tbl_cell_bold_center),
+         Paragraph("<b>57</b>", tbl_cell_bold_center),
+         Paragraph("<b>$925.48</b>", tbl_cell_bold_right),
+         Paragraph("Identical Held-Out Split", tbl_cell_center)],
+
+        [Paragraph("<b>Baseline LogReg</b> (Fixed)", tbl_cell_bold),
+         Paragraph("Fixed $p \\ge 0.50$", tbl_cell_center),
+         Paragraph("91.84%", tbl_cell_center),
+         Paragraph("5.20%", tbl_cell_center),
+         Paragraph("1,640", tbl_cell_center),
+         Paragraph("$4,514.81", tbl_cell_right),
+         Paragraph("Identical Held-Out Split", tbl_cell_center)],
+
+        [Paragraph("<b>Baseline LogReg</b> (Tuned)", tbl_cell_bold),
+         Paragraph("Tuned $\\tau = 0.83$", tbl_cell_center),
+         Paragraph("88.78%", tbl_cell_center),
+         Paragraph("18.63%", tbl_cell_center),
+         Paragraph("<b>380</b>", tbl_cell_bold_center),
+         Paragraph("<b>$1,700.66</b>", tbl_cell_bold_right),
+         Paragraph("Identical Held-Out Split", tbl_cell_center)]
     ]
-    t_rec = Table([rec_headers] + rec_rows, colWidths=[95, 105, 50, 50, 65, 175])
+    t_rec = Table([rec_headers] + rec_rows, colWidths=[130, 80, 50, 50, 60, 75, 95])
     t_rec.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), c_secondary),
         ('BOX', (0,0), (-1,-1), 1, c_border),
         ('INNERGRID', (0,0), (-1,-1), 0.5, c_border),
-        ('PADDING', (0,0), (-1,-1), 3),
+        ('PADDING', (0,0), (-1,-1), 2.0),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_highlight]),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(t_rec)
     story.append(Spacer(1, 3))
     story.append(Paragraph(
-        "<b>Synthesis:</b> Under a static cutoff ($p = 0.50$), stacking flags borderline mass to maximize recall (90.34%) at the cost of 1,880 false alarms. "
-        "When paired with Step 8 dynamic Bayes decision rules ($p^*(x)$), false alarms drop by <b>93.7%</b> (to 118), catapulting precision to 42.16%.",
+        "<b>Synthesis:</b> On the exact same held-out transactions, threshold optimization reduces false positives by <b>76% to 94%</b> "
+        "and cuts net operational losses by 62% to 78% while preserving 85%–89% recall. This confirms that precision gains stem from decision boundary "
+        "calibration rather than partition variance.",
         body
     ))
     story.append(PageBreak())
@@ -1653,10 +1685,10 @@ def build_pdf_monograph():
         "This ranking inversion is verified against the <b>exact same cost formula, model predictions, and test splits ($p = 0.50$ fixed cutoff)</b>:<br/>"
         "Each model's total cost function is a straight line: $\\mathcal{L}(C_{\\text{FP}}) = \\bar{\\text{FP}} \\cdot C_{\\text{FP}} + \\bar{\\text{FN}}_{\\$}$, "
         "where slope is false-positive count $\\bar{\\text{FP}}$ and y-intercept is unpenalized missed fraud loss $\\bar{\\text{FN}}_{\\$}$. "
-        "Soft-Voting catches $727.69 more fraud than Baseline LogReg ($1,944.26 missed vs $2,671.95), giving it a lower y-intercept. "
-        "However, Soft-Voting generates 781.0 more false positives (1,299.3 vs 518.3), giving it a steeper slope. "
-        "At $C_{\\text{FP}} = \\$0.50$, the financial penalty of those 781.0 extra false alarms is only $781.0 \\times \\$0.50 = \\$390.50$. "
-        "Because fraud savings ($727.69) exceed alert costs ($390.50), Soft-Voting gains a net financial advantage of <b>+$337.19</b> over Baseline LogReg. "
+        "Soft-Voting catches $728.14 more fraud than Baseline LogReg ($1,943.76 missed vs $2,671.90), giving it a lower y-intercept. "
+        "However, Soft-Voting generates 780.94 more false positives (1,299.26 vs 518.32), giving it a steeper slope. "
+        "At $C_{\\text{FP}} = \\$0.50$, the financial penalty of those 780.94 extra false alarms is only $780.94 \\times \\$0.50 = \\$390.47$. "
+        "Because fraud savings ($728.14) exceed alert costs ($390.47), Soft-Voting gains a net financial advantage of <b>+$337.67</b> over Baseline LogReg. "
         "By equating the two cost lines, we analytically solve for the <b>exact breakeven cost</b> $C_{\\text{FP}}^*$:",
         body
     ))
@@ -1665,10 +1697,10 @@ def build_pdf_monograph():
         math_block
     ))
     story.append(Paragraph(
-        "• <b>Soft-Voting vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,671.95 - \\$1,944.26}{1,299.3 - 518.3} = \\frac{\\$727.69}{781.0} = \\mathbf{\\$0.9317}$. "
-        "For any alert cost below $0.9317, Soft-Voting is mathematically guaranteed to minimize loss under the exact same fixed cutoff ($p=0.50$); above $0.9317, Baseline LogReg wins.<br/>"
-        "• <b>GBDT vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,671.95 - \\$2,290.04}{892.7 - 518.3} = \\frac{\\$381.91}{374.4} = \\mathbf{\\$1.0201}$. GBDT is optimal in the transition zone ($0.93 to $1.02).<br/>"
-        "• <b>Cost-Sensitive LogReg vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,671.95 - \\$926.36}{7,854.0 - 518.3} = \\frac{\\$1,745.59}{7,335.7} = \\mathbf{\\$0.2380}$. Viable only below 24 cents.<br/>"
+        "• <b>Soft-Voting vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,671.90 - \\$1,943.76}{1,299.26 - 518.32} = \\frac{\\$728.14}{780.94} = \\mathbf{\\$0.9324}$. "
+        "For any alert cost below $0.9324, Soft-Voting is mathematically guaranteed to minimize loss under the exact same fixed cutoff ($p=0.50$); above $0.9324, Baseline LogReg wins.<br/>"
+        "• <b>GBDT vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,671.90 - \\$2,290.04}{892.68 - 518.32} = \\frac{\\$381.86}{374.36} = \\mathbf{\\$1.0200}$. GBDT is optimal in the transition zone ($0.9324 to $1.0200).<br/>"
+        "• <b>Cost-Sensitive LogReg vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,671.90 - \\$926.39}{7,853.99 - 518.32} = \\frac{\\$1,745.51}{7,335.67} = \\mathbf{\\$0.2380}$. Viable only below 23.8 cents.<br/>"
         "<b>Fixed vs. Dynamic Bayes Thresholding Paradigm:</b> Under fixed thresholding ($p=0.50$), rankings shift along linear cost frontiers as slopes trade off against intercepts. "
         "Under dynamic Bayesian thresholding ($p^*(x) = \\frac{C_{\\text{FP}}}{C_{\\text{FP}} + \\text{Amount}(x)}$), changing $C_{\\text{FP}}$ dynamically shifts the probability cutoff curve, "
         "altering the decision boundary directly. Both paradigms confirm the same operational reality: low-cost automated verification favors aggressive fraud capture (Soft-Voting), "
@@ -1745,8 +1777,11 @@ def build_pdf_monograph():
         "<b>Model Risk Management (SR 11-7):</b> The Federal Reserve requires continuous tracking of conceptual soundness and rigorous benchmarking "
         "against challenger models. Our 100-run Monte Carlo protocol and pure NumPy implementation fulfill SR 11-7 documentation standards by providing "
         "full mathematical transparency without closed-source vendor black boxes.",
-        "<b>PSD2 SCA TRA Compliance:</b> Under EBA RTS Article 18, banks must monitor rolling 90-day fraud rates. Deploying our GBDT architecture "
-        "guarantees an FPR < 1.6%, keeping rolling gross fraud well below the strict 0.03% threshold required to retain frictionless checkout privileges.",
+        "<b>PSD2 SCA Transaction Risk Analysis (TRA) Context:</b> Under EBA RTS Article 18, payment service providers may exempt low-risk transactions "
+        "from Strong Customer Authentication (SCA) only if their rolling 90-day gross fraud monetary rate (Fraud Loss / Total Processed Sales) remains below "
+        "strict regulatory thresholds (0.01% to 0.06% depending on transaction amount tiers). While our GBDT architecture demonstrates a low false-positive rate "
+        "of 1.57% (reducing operational alert volume), a low FPR is a distinct operational metric from gross fraud loss ratio and does not guarantee regulatory compliance. "
+        "True compliance cannot be established from offline benchmark metrics alone and requires continuous monitoring of live aggregate settlement streams.",
         "<b>Adverse Action Explanations (GDPR Art. 22 / FCRA):</b> When a cardholder is declined, institutions must provide actionable adverse action notices. "
         "Because our Tier 1 model is linear and our Tier 2 GBDT utilizes shallow decision stumps, exact per-feature SHAP-like attribution can be generated in real-time."
     ]
@@ -1843,7 +1878,9 @@ def build_pdf_monograph():
         "Consumer Financial Protection Bureau. (2016). '12 CFR Part 1005 (Regulation E) — Electronic Fund Transfers.' CFPB Annual Regulatory Digest.",
         "Nilson Report. (2023). 'Card Fraud Losses Worldwide.' Issue 1254, December 2023.",
         "Javelin Strategy & Research. (2021). 'The Cost of False Positive Card Declines.' Financial Services Operational Benchmark Series.",
-        "LexisNexis Risk Solutions. (2023). '2023 True Cost of Fraud Study: Financial Services and Lending.' Global Financial Fraud Report."
+        "LexisNexis Risk Solutions. (2023). '2023 True Cost of Fraud Study: Financial Services and Lending.' Global Financial Fraud Report.",
+        "Dietterich, T. G. (1998). 'Approximate statistical tests for comparing supervised classification learning algorithms.' <i>Neural Computation</i>, 10(7), 1895–1923.",
+        "Bengio, Y., & Grandvalet, Y. (2004). 'No unbiased estimator of the variance of K-fold cross-validation.' <i>Journal of Machine Learning Research (JMLR)</i>, 5, 1089–1105."
     ]
     for ref in references:
         story.append(Paragraph(f"• {ref}", tbl_cell))
