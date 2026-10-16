@@ -10,6 +10,91 @@ from reportlab.platypus import (
 )
 from reportlab.pdfgen import canvas
 
+
+import io
+import matplotlib.pyplot as plt
+from PIL import Image as PILImage
+from reportlab.platypus import Image as RLImage
+
+_EQUATION_CACHE = {}
+
+def render_math_equation(latex_str, fontsize=8.5, dpi=300, max_width=490):
+    cache_key = (latex_str, fontsize, dpi)
+    if cache_key in _EQUATION_CACHE:
+        buf, pt_w, pt_h = _EQUATION_CACHE[cache_key]
+        buf.seek(0)
+        img = RLImage(buf, width=pt_w, height=pt_h)
+        img.hAlign = 'CENTER'
+        return img
+
+    s = latex_str.strip()
+    while s.startswith('$'):
+        s = s[1:].strip()
+    while s.endswith('$'):
+        s = s[:-1].strip()
+
+    s = s.replace(r'\text{', r'\mathrm{')
+    s = s.replace(r'\pmod{86400}', r'(\mathrm{mod}\ 86400)')
+    s = s.replace(r'\%', r'\%')
+    s = s.replace(r'\mathbb{E}', r'\mathbf{E}')
+    s = s.replace(r'\mathbb{I}', r'\mathbf{I}')
+    s = s.replace(r'\mathbb{R}', r'\mathbf{R}')
+    s = s.replace(r'\mathbb{D}', r'\mathbf{D}')
+    s = s.replace(r'\iff', r'\Longleftrightarrow')
+    if r'\begin{cases}' in s:
+        s = r'w_i = (\mathrm{Amount}_i / \mu_{\mathrm{Amount}}) \times \alpha \quad (\mathrm{if}\ y_i = 1)'
+    
+    s = s.replace(r'\bar{\mathrm{FN}}_{\$, A}', r'\overline{\mathrm{FN}}_{\mathrm{USD}, A}')
+    s = s.replace(r'\bar{\mathrm{FN}}_{\$, B}', r'\overline{\mathrm{FN}}_{\mathrm{USD}, B}')
+    s = s.replace(r'\bar{\mathrm{FP}}_A', r'\overline{\mathrm{FP}}_A')
+    s = s.replace(r'\bar{\mathrm{FP}}_B', r'\overline{\mathrm{FP}}_B')
+    s = s.replace(r'\bar{\mathrm{FP}}', r'\overline{\mathrm{FP}}')
+    s = s.replace(r'\bar{\theta}', r'\overline{\theta}')
+    s = s.replace(r'\odot', r'\cdot')
+    s = s.replace(r'\;', r'\ ')
+    s = s.replace(r'\$', r'\$')
+
+    fig = plt.figure(figsize=(10, 0.8))
+    fig.patch.set_alpha(0.0)
+    fig.text(0.5, 0.5, f'${s}$', fontsize=fontsize, ha='center', va='center', color='#0F172A')
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=dpi, bbox_inches='tight', transparent=True, pad_inches=0.02)
+    plt.close(fig)
+    buf.seek(0)
+
+    pil_img = PILImage.open(buf)
+    pt_w = pil_img.size[0] * 72.0 / dpi
+    pt_h = pil_img.size[1] * 72.0 / dpi
+
+    if pt_w > max_width:
+        scale = max_width / pt_w
+        pt_w *= scale
+        pt_h *= scale
+
+    if pt_h > 20:
+        scale = 20.0 / pt_h
+        pt_w *= scale
+        pt_h *= scale
+
+    _EQUATION_CACHE[cache_key] = (buf, pt_w, pt_h)
+    buf.seek(0)
+    img = RLImage(buf, width=pt_w, height=pt_h)
+    img.hAlign = 'CENTER'
+    return img
+
+def make_equation_flowable(latex_str, fontsize=8.5, max_width=490):
+    img = render_math_equation(latex_str, fontsize=fontsize, max_width=max_width)
+    t = Table([[img]], colWidths=[540])
+    t.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.0),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    return t
+
 class NumberedCanvas(canvas.Canvas):
     """
     Two-pass canvas to dynamically compute and draw accurate total page counts
@@ -273,18 +358,18 @@ def build_pdf_monograph():
         "<b>STRUCTURED RESEARCH ABSTRACT (240 Words):</b><br/>"
         "<b>Context:</b> Payment card fraud imposes billions of dollars in annual losses while operating under extreme class rarity.<br/>"
         "<b>Problem:</b> Standard machine learning formulations optimize symmetric losses (accuracy, log-loss) that ignore the asymmetric operational "
-        "economics of fraud detection, where false negatives risk direct stolen capital ($C_{\\text{FN}} = \\text{Amount}$) and false positives incur customer friction "
-        "and manual investigation costs ($C_{\\text{FP}}$).<br/>"
+        "economics of fraud detection, where false negatives risk direct stolen capital (<i>C</i><sub>FN</sub> = Amount) and false positives incur customer friction "
+        "and manual investigation costs (<i>C</i><sub>FP</sub>).<br/>"
         "<b>Methodology:</b> We develop an end-to-end fraud detection architecture from first principles using pure Python and vectorized NumPy, "
         "incorporating 10 distinct algorithmic milestones: SMOTE, cyclic diurnal encoding, deep MLPs with analytical backpropagation and Adam optimization, "
         "gradient boosted decision trees (GBDT), unsupervised isolation forests, cost-sensitive loss reweighting, soft-voting ensembles, "
         "dynamic instance-dependent Bayesian thresholding, focal loss, and stacked generalization. All models are evaluated across a 1,000-run stratified "
-        "Monte Carlo simulation ($N = 1,000$) on the 284,807-transaction ULB benchmark.<br/>"
+        "Monte Carlo simulation (<i>N</i> = 1,000) on the 284,807-transaction ULB benchmark.<br/>"
         "<b>Key Findings:</b> While Cost-Sensitive Logistic Regression maximizes event recall (95.53% ± 0.13%) and dollar recall (94.57% ± 0.40%), "
         "it generates 8,444 false positives per split (14.85% FPR), resulting in the worst net financial operating loss ($21,774 per split at $2.50 per review). "
         "In contrast, GBDT achieves the lowest net operational loss ($4,369) and lowest tail risk (CVaR_99% = $8,118) under standard manual review overhead ($C_{\\text{FP}} = \\$2.50), "
         "while Baseline Logistic Regression ($5,322 loss) provides high-explainability linear performance. "
-        "Soft-voting ensembles minimize loss ($2,485) when automated in-app challenges reduce false alarm verification costs ($C_{\\text{FP}} \\le \\$0.50$).<br/>"
+        "Soft-voting ensembles minimize loss ($2,485) when automated in-app challenges reduce false alarm verification costs (<i>C</i><sub>FP</sub> &le; $0.50).<br/>"
         "<b>Significance:</b> High recall does not imply operational success; optimal model selection is strictly a function of institutional review capacity."
     )
     t_abs2 = Table([[Paragraph(abstract_structured, callout_text)]], colWidths=[540])
@@ -355,24 +440,21 @@ def build_pdf_monograph():
 
     story.append(Paragraph("1.2 Mathematical Formulation of Extreme Class Imbalance", subsec_heading))
     story.append(Paragraph(
-        "Let $\\mathcal{D} = \\{(x_i, y_i)\\}_{i=1}^N$ denote a transaction corpus where $x_i \\in \\mathbb{R}^D$ represents the observed feature vector "
-        "and $y_i \\in \\{0, 1\\}$ denotes the binary transaction status (0 for genuine, 1 for fraudulent). In credit card acquiring networks, the "
-        "class prior $P(Y=1) = \\pi_1$ is vanishingly small. In the benchmark under investigation, $\\pi_1 = \\frac{492}{284,807} \\approx 0.001727$ (0.1727%).",
+        "Let <i><b>D</b></i> = {(<i>x<sub>i</sub></i>, <i>y<sub>i</sub></i>)}<sub><i>i</i>=1</sub><sup><i>N</i></sup> denote a transaction corpus where <i>x<sub>i</sub></i> &isin; <b>R</b><sup><i>D</i></sup> represents the observed feature vector "
+        "and <i>y<sub>i</sub></i> &isin; {0, 1} denotes the binary transaction status (0 for genuine, 1 for fraudulent). In credit card acquiring networks, the "
+        "class prior <i>P</i>(<i>Y</i>=1) = &pi;<sub>1</sub> is vanishingly small. In the benchmark under investigation, &pi;<sub>1</sub> = 492 / 284,807 &asymp; 0.001727 (0.1727%).",
         body
     ))
     story.append(Paragraph(
-        "Under standard Empirical Risk Minimization (ERM) with 0-1 loss $\\mathcal{L}_{0-1}(\\hat{y}, y) = \\mathbb{I}(\\hat{y} \\neq y)$, the Bayes optimal classifier "
-        "$h^*(x)$ predicts $\\hat{y} = \\arg\\max_{k \\in \\{0, 1\\}} P(Y=k|X=x)$. Because $P(Y=1|X=x) < 0.5$ across virtually the entire feature space, "
-        "the standard ERM objective collapses to the trivial majority classifier $h_{\\text{trivial}}(x) \\equiv 0$. "
+        "Under standard Empirical Risk Minimization (ERM) with 0-1 loss <i>L</i><sub>0-1</sub>(<i>y&#770;</i>, <i>y</i>) = <b>I</b>(<i>y&#770;</i> &ne; <i>y</i>), the Bayes optimal classifier "
+        "<i>h</i>*(<i>x</i>) predicts <i>y&#770;</i> = argmax<sub><i>k</i>&isin;{0,1}</sub> <i>P</i>(<i>Y</i>=<i>k</i> | <i>X</i>=<i>x</i>). Because <i>P</i>(<i>Y</i>=1 | <i>X</i>=<i>x</i>) &lt; 0.5 across virtually the entire feature space, "
+        "the standard ERM objective collapses to the trivial majority classifier <i>h</i><sub>trivial</sub>(<i>x</i>) &equiv; 0. "
         "This trivial predictor achieves an apparent accuracy of:",
         body
     ))
+    story.append(make_equation_flowable("$$\\text{Accuracy}(h_{\\text{trivial}}) = 1 - \\pi_1 = 1 - 0.001727 = 99.8273\\%$$"))
     story.append(Paragraph(
-        "$$\\text{Accuracy}(h_{\\text{trivial}}) = 1 - \\pi_1 = 1 - 0.001727 = 99.8273\\%$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "Despite achieving nearly 99.83% accuracy, $h_{\\text{trivial}}$ captures precisely zero fraudulent transactions (Recall = 0.0%), "
+        "Despite achieving nearly 99.83% accuracy, <i>h</i><sub>trivial</sub> captures precisely zero fraudulent transactions (Recall = 0.0%), "
         "permitting 100% of stolen capital to drain unchecked. This illustrates the fundamental collapse of symmetric evaluation metrics in rare-event modeling. "
         "Consequently, evaluating fraud screening algorithms requires decoupling performance into sensitivity across positive events, precision over "
         "generated alarms, and financial cost minimization under asymmetric penalties.",
@@ -389,7 +471,7 @@ def build_pdf_monograph():
         "strictly using pure Python and multi-dimensional NumPy array broadcasting. This removes opaque abstraction layers, exposing the raw numerical "
         "linear algebra, analytical gradient backpropagation, and loss surface geometry.",
         "<b>2. Asymmetric Financial Loss Formulation:</b> Replace symmetric cross-entropy with a dollar-weighted, cost-sensitive objective where "
-        "false negatives incur variable monetary damage ($C_{\\text{FN}} = \\text{Amount}$) and false positives incur fixed operational handling overhead ($C_{\\text{FP}}$).",
+        "false negatives incur variable monetary damage (<i>C</i><sub>FN</sub> = Amount) and false positives incur fixed operational handling overhead (<i>C</i><sub>FP</sub>).",
         "<b>3. Monte Carlo Uncertainty Quantification:</b> Conduct an exhaustive 100-run stratified simulation to report sample means, standard deviations, "
         "and Central Limit Theorem confidence intervals, distinguishing estimator variance from true generalization.",
         "<b>4. Empirical Operational Trade-Off Analysis:</b> Demonstrate why maximizing event recall (catching fraud) frequently leads to catastrophic operational "
@@ -419,7 +501,7 @@ def build_pdf_monograph():
         "A model that suffers high false-negative slippage risks revoking the institution's SCA exemption privileges, causing severe customer checkout friction.",
         "<b>2. United States Federal Reserve Regulation E (12 CFR Part 1005):</b> Implements the Electronic Fund Transfer Act (EFTA). Under § 1005.6, "
         "consumer liability for unauthorized electronic fund transfers is legally capped at $50 (or $0 under Visa/Mastercard Zero Liability rules), "
-        "mandating that financial institutions absorb 100% of unrecovered stolen funds. Hence, $C_{\\text{FN}} = \\text{Amount}$.",
+        "mandating that financial institutions absorb 100% of unrecovered stolen funds. Hence, <i>C</i><sub>FN</sub> = Amount.",
         "<b>3. Federal Reserve Board / OCC Supervisory Guidance on Model Risk Management (SR Letter 11-7):</b> Mandates rigorous conceptual soundness, "
         "continuous outcome analysis, and benchmark comparisons against challenger models. It prohibits unverified statistical claims and requires explicit "
         "documentation of operational assumptions and parameter sensitivity."
@@ -429,8 +511,8 @@ def build_pdf_monograph():
 
     story.append(Paragraph("1.5 Bayes Decision Theory Under Asymmetric Cost Matrices", subsec_heading))
     story.append(Paragraph(
-        "Let action $a \\in \\{0, 1\\}$ denote the screening decision (0 = Allow, 1 = Flag/Block), and let $y \\in \\{0, 1\\}$ denote ground truth. "
-        "The asymmetric financial cost matrix $\\mathcal{C}(a, y)$ is defined as:",
+        "Let action <i>a</i> &isin; {0, 1} denote the screening decision (0 = Allow, 1 = Flag/Block), and let <i>y</i> &isin; {0, 1} denote ground truth. "
+        "The asymmetric financial cost matrix <i>C</i>(<i>a</i>, <i>y</i>) is defined as:",
         body
     ))
 
@@ -442,11 +524,11 @@ def build_pdf_monograph():
     ]
     cost_tbl_rows = [
         [Paragraph("<b>Genuine Transaction (y = 0)</b>", tbl_cell_bold),
-         Paragraph("$\\mathcal{C}(0, 0) = \\$0.00$<br/>(Frictionless legitimate commerce)", tbl_cell_center),
-         Paragraph("$\\mathcal{C}(1, 0) = C_{\\text{FP}}$<br/>(SMS gateway, analyst review, churn friction)", tbl_cell_center)],
+         Paragraph("<i>C</i>(0, 0) = $0.00<br/>(Frictionless legitimate commerce)", tbl_cell_center),
+         Paragraph("<i>C</i>(1, 0) = <i>C</i><sub>FP</sub><br/>(SMS gateway, analyst review, churn friction)", tbl_cell_center)],
         [Paragraph("<b>Fraudulent Transaction (y = 1)</b>", tbl_cell_bold),
-         Paragraph("$\\mathcal{C}(0, 1) = C_{\\text{FN}}(x) = \\text{Amount}(x)$<br/>(Direct stolen capital indemnified by bank)", tbl_cell_center),
-         Paragraph("$\\mathcal{C}(1, 1) = C_{\\text{TP}} = \\$0.00$ (or nominal review cost)<br/>(Stolen funds saved, fraud prevented)", tbl_cell_center)]
+         Paragraph("<i>C</i>(0, 1) = <i>C</i><sub>FN</sub>(<i>x</i>) = Amount(<i>x</i>)<br/>(Direct stolen capital indemnified by bank)", tbl_cell_center),
+         Paragraph("<i>C</i>(1, 1) = <i>C</i><sub>TP</sub> = $0.00 (or nominal review cost)<br/>(Stolen funds saved, fraud prevented)", tbl_cell_center)]
     ]
     t_cm = Table([cost_tbl_headers] + cost_tbl_rows, colWidths=[140, 200, 200])
     t_cm.setStyle(TableStyle([
@@ -464,22 +546,16 @@ def build_pdf_monograph():
         "Under Bayes risk minimization, the optimal decision rule flags transaction $x$ if the expected cost of flagging is less than the expected cost of allowing:",
         body
     ))
+    story.append(make_equation_flowable("$$\\mathbb{E}[\\text{Cost} | a = 1] < \\mathbb{E}[\\text{Cost} | a = 0] \\iff (1 - p(x)) C_{\\text{FP}} + p(x) C_{\\text{TP}} < (1 - p(x)) \\mathcal{C}(0, 0) + p(x) C_{\\text{FN}}(x)$$"))
     story.append(Paragraph(
-        "$$\\mathbb{E}[\\text{Cost} | a = 1] < \\mathbb{E}[\\text{Cost} | a = 0] \\iff (1 - p(x)) C_{\\text{FP}} + p(x) C_{\\text{TP}} < (1 - p(x)) \\mathcal{C}(0, 0) + p(x) C_{\\text{FN}}(x)$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "Assuming $\\mathcal{C}(0, 0) = 0$ and $C_{\\text{TP}} = 0$, this inequality simplifies to the dynamic Bayes minimum risk threshold:",
+        "Assuming <i>C</i>(0, 0) = 0 and <i>C</i><sub>TP</sub> = $0, this inequality simplifies to the dynamic Bayes minimum risk threshold:",
         body
     ))
+    story.append(make_equation_flowable("$$p^*(x) = \\frac{C_{\\text{FP}}}{C_{\\text{FP}} + C_{\\text{FN}}(x)} = \\frac{C_{\\text{FP}}}{C_{\\text{FP}} + \\text{Amount}(x)}$$"))
     story.append(Paragraph(
-        "$$p^*(x) = \\frac{C_{\\text{FP}}}{C_{\\text{FP}} + C_{\\text{FN}}(x)} = \\frac{C_{\\text{FP}}}{C_{\\text{FP}} + \\text{Amount}(x)}$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "This formulation proves mathematically that static decision thresholds (e.g., $p = 0.50$) are economically irrational in financial fraud systems. "
-        "A $5,000 transaction requires an aggressive threshold ($p^* \\approx 0.05\\%$) to prevent catastrophic loss, whereas a $1.50 micro-transaction "
-        "requires $p^* \\approx 62.5\\%$ to prevent wasting $2.50 in operational overhead on an unrecoverable nominal sum.",
+        "This formulation proves mathematically that static decision thresholds (e.g., <i>p</i> = 0.50) are economically irrational in financial fraud systems. "
+        "A $5,000 transaction requires an aggressive threshold (<i>p</i>* &asymp; 0.05%) to prevent catastrophic loss, whereas a $1.50 micro-transaction "
+        "requires <i>p</i>* &asymp; 62.5% to prevent wasting $2.50 in operational overhead on an unrecoverable nominal sum.",
         body
     ))
     story.append(PageBreak())
@@ -504,9 +580,9 @@ def build_pdf_monograph():
     story.append(Paragraph(
         "Due to personal privacy requirements under European Directive 95/46/EC and PCI-DSS compliance, original cardholder identifiers, "
         "merchant category codes (MCC), geolocation vectors, and terminal IDs were projected via Principal Component Analysis (PCA) into 28 "
-        "orthogonal numerical features ($V_1$ through $V_{28}$). Mathematically, the centered feature matrix $X \\in \\mathbb{R}^{N \\times 28}$ was "
-        "decomposed via Singular Value Decomposition (SVD): $X = U \\Sigma V^T$. By construction, the covariance matrix $\\frac{1}{N} X^T X = \\frac{1}{N} V \\Sigma^2 V^T$ "
-        "is diagonal, satisfying $\\text{Cov}(V_i, V_j) = 0$ for all $i \\neq j$. Only `Time` (seconds elapsed from the first recorded transaction) "
+        "orthogonal numerical features (<i>V</i><sub>1</sub> through <i>V</i><sub>28</sub>). Mathematically, the centered feature matrix <i>X</i> &isin; <b>R</b><sup><i>N</i>&times;28</sup> was "
+        "decomposed via Singular Value Decomposition (SVD): <b>X</b> = <b>U</b> &Sigma; <b>V</b><sup><i>T</i></sup>. By construction, the covariance matrix (1/<i>N</i>) <b>X</b><sup><i>T</i></sup><b>X</b> = (1/<i>N</i>) <b>V</b> &Sigma;<sup>2</sup> <b>V</b><sup><i>T</i></sup> "
+        "is diagonal, satisfying Cov(<i>V<sub>i</sub></i>, <i>V<sub>j</sub></i>) = 0 for all <i>i</i> &ne; <i>j</i>. Only `Time` (seconds elapsed from the first recorded transaction) "
         "and `Amount` (transaction currency value) remain in unprojected physical units.",
         body
     ))
@@ -574,17 +650,14 @@ def build_pdf_monograph():
 
     story.append(Paragraph("2.5 Cyclic Diurnal Encoding of Elapsed Time", subsec_heading))
     story.append(Paragraph(
-        "The raw `Time` feature records cumulative seconds elapsed from $t_0$. While elapsed seconds provide a monotonic progression, "
+        "The raw `Time` feature records cumulative seconds elapsed from <i>t</i><sub>0</sub>. While elapsed seconds provide a monotonic progression, "
         "fraud behavior is strongly dictated by human circadian cycles: legitimate purchases peak during daylight business hours, whereas "
         "automated botnets and fraudulent carding operations exploit the midnight-to-4 AM lull. Directly feeding linear seconds into linear models "
         "is topologically flawed because second 86,399 (23:59:59) and second 0 (00:00:00) appear maximally distant despite being 1 second apart. "
         "To enforce circular topological continuity, we map elapsed seconds $t$ onto the 2D unit circle:",
         body
     ))
-    story.append(Paragraph(
-        "$$t_{\\text{diurnal}} = t \\pmod{86400}, \\quad t_{\\sin} = \\sin\\left(\\frac{2\\pi t_{\\text{diurnal}}}{86400}\\right), \\quad t_{\\cos} = \\cos\\left(\\frac{2\\pi t_{\\text{diurnal}}}{86400}\\right)$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$t_{\\text{diurnal}} = t \\pmod{86400}, \\quad t_{\\sin} = \\sin\\left(\\frac{2\\pi t_{\\text{diurnal}}}{86400}\\right), \\quad t_{\\cos} = \\cos\\left(\\frac{2\\pi t_{\\text{diurnal}}}{86400}\\right)$$"))
     story.append(Paragraph(
         "This trigonometric transformation preserves diurnal phase proximity, allowing linear classifiers and neural networks to capture "
         "time-of-day fraud vulnerability without artificial discontinuity.",
@@ -600,16 +673,16 @@ def build_pdf_monograph():
         "<b>1. Pre-Split Resampling (The SMOTE Leakage Trap):</b> If SMOTE or random oversampling is applied to the full dataset prior to train/test partitioning, "
         "synthetic samples generated from test instances will populate the training fold. The model then simply memorizes synthetic duplicates of test points, "
         "falsely inflating recall from ~85% to >99%. In this monograph, SMOTE is strictly confined to the training partition.",
-        "<b>2. Global Feature Normalization:</b> Computing scaling parameters (mean $\\mu$ and standard deviation $\\sigma$) across the entire dataset leaks "
-        "information regarding the test distribution variance into training. All transformations must freeze parameters derived solely from $\\mathcal{D}_{\\text{train}}$."
+        "<b>2. Global Feature Normalization:</b> Computing scaling parameters (mean &mu; and standard deviation &sigma;) across the entire dataset leaks "
+        "information regarding the test distribution variance into training. All transformations must freeze parameters derived solely from <i>D</i><sub>train</sub>."
     ]
     for lk in leak_items:
         story.append(Paragraph(f"• {lk}", body))
 
     story.append(Paragraph("2.7 Formal Invariant Proof & Pipeline Flow Architecture", subsec_heading))
     story.append(Paragraph(
-        "Let $\\mathcal{P}$ denote the complete data pipeline. We formally enforce the invariant $\\mathcal{S}_{\\text{synthetic}} \\cap \\mathcal{D}_{\\text{test}} = \\emptyset$ "
-        "and $\\theta_{\\text{scaler}} = f(\\mathcal{D}_{\\text{train}})$. The sequential execution order is depicted below:",
+        "Let <i>P</i> denote the complete data pipeline. We formally enforce the invariant <i>S</i><sub>synthetic</sub> &cap; <i>D</i><sub>test</sub> = &empty; "
+        "and &theta;<sub>scaler</sub> = <i>f</i>(<i>D</i><sub>train</sub>). The sequential execution order is depicted below:",
         body
     ))
 
@@ -677,22 +750,19 @@ def build_pdf_monograph():
     story.append(Paragraph(
         "<b>Objective:</b> Alleviate gradient starvation of rare minority vectors during gradient descent without causing exact instance duplication "
         "which induces severe decision boundary overfitting.<br/>"
-        "<b>Mathematical Formulation:</b> Let $\\mathcal{X}_{\\text{min}} = \\{x_1, \\dots, x_M\\}$ denote the set of minority class instances. "
-        "For each vector $x_i \\in \\mathcal{X}_{\\text{min}}$, compute its Euclidean distance to all other minority vectors: "
-        "$d(x_i, x_j) = \\|x_i - x_j\\|_2 = \\sqrt{\\sum_{d=1}^D (x_{id} - x_{jd})^2}$. Identify the $k$-nearest minority neighbors $\\mathcal{N}_k(x_i)$. "
-        "To generate synthetic vector $x_{\\text{syn}}$, randomly sample a neighbor $x_{zi} \\in \\mathcal{N}_k(x_i)$ and interpolate along the line segment:",
+        "<b>Mathematical Formulation:</b> Let <i>X</i><sub>min</sub> = {<i>x</i><sub>1</sub>, ..., <i>x<sub>M</sub></i>} denote the set of minority class instances. "
+        "For each vector <i>x<sub>i</sub></i> &isin; <i>X</i><sub>min</sub>, compute its Euclidean distance to all other minority vectors: "
+        "<i>d</i>(<i>x<sub>i</sub></i>, <i>x<sub>j</sub></i>) = &radic;(&sum;<sub><i>d</i></sub> (<i>x<sub>id</sub></i> - <i>x<sub>jd</sub></i>)<sup>2</sup>). Identify the $k$-nearest minority neighbors <i>N<sub>k</sub></i>(<i>x<sub>i</sub></i>). "
+        "To generate synthetic vector <i>x</i><sub>syn</sub>, randomly sample a neighbor <i>x<sub>zi</sub></i> &isin; <i>N<sub>k</sub></i>(<i>x<sub>i</sub></i>) and interpolate along the line segment:",
         body
     ))
-    story.append(Paragraph(
-        "$$x_{\\text{syn}} = x_i + \\lambda (x_{zi} - x_i), \\quad \\lambda \\sim \\text{Uniform}(0, 1)$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$x_{\\text{syn}} = x_i + \\lambda (x_{zi} - x_i), \\quad \\lambda \\sim \\text{Uniform}(0, 1)$$"))
     story.append(Paragraph(
         "<b>Pure NumPy Implementation Details:</b> Fully vectorized pairwise distance matrix computation via broadcasted array expansion:<br/>"
         "<font face='Courier' size='6.8' color='#0369A1'>diff = X_min[:, np.newaxis, :] - X_min[np.newaxis, :, :]<br/>"
         "dist_matrix = np.linalg.norm(diff, axis=-1)<br/>"
         "knn_indices = np.argsort(dist_matrix, axis=1)[:, 1:k+1]</font><br/>"
-        "<b>Computational Complexity:</b> $\\mathcal{O}(M^2 D)$ where $M$ is the minority count ($M = 394$). Because $M$ is small, pure NumPy executes this in 42 ms.<br/>"
+        "<b>Computational Complexity:</b> <i>O</i>(<i>M</i><sup>2</sup><i>D</i>) where $M$ is the minority count ($M = 394$). Because $M$ is small, pure NumPy executes this in 42 ms.<br/>"
         "<b>Theoretical Limitations:</b> Linear interpolation assumes convex feature manifolds. In high-dimensional sparse spaces ($D = 30$), "
         "synthetic points can fall into empty regions of genuine class space, slightly elevating false-positive propensity.",
         body
@@ -703,27 +773,21 @@ def build_pdf_monograph():
     story.append(Paragraph("Step 2: Deep Multi-Layer Perceptron (MLP) with Backpropagation and Adam", subsec_heading))
     story.append(Paragraph(
         "<b>Objective:</b> Model complex, non-linear feature interactions and high-order decision boundaries across orthogonal PCA coordinates.<br/>"
-        "<b>Mathematical Formulation:</b> A 3-layer deep architecture: Input $\\in \\mathbb{R}^{30} \\to$ Layer 1 (64 units, LeakyReLU) $\\to$ "
+        "<b>Mathematical Formulation:</b> A 3-layer deep architecture: Input &isin; <b>R</b><sup>30</sup> &rarr;$ Layer 1 (64 units, LeakyReLU) $\\to$ "
         "Layer 2 (32 units, LeakyReLU) $\\to$ Output (1 unit, Sigmoid). Forward propagation equations:<br/>"
-        "$Z^{[1]} = X W^{[1]} + b^{[1]}, \\quad A^{[1]} = \\max(0.01 Z^{[1]}, Z^{[1]})$<br/>"
-        "$Z^{[2]} = A^{[1]} W^{[2]} + b^{[2]}, \\quad A^{[2]} = \\max(0.01 Z^{[2]}, Z^{[2]})$<br/>"
-        "$Z^{[3]} = A^{[2]} W^{[3]} + b^{[3]}, \\quad \\hat{y} = \\sigma(Z^{[3]}) = \\frac{1}{1 + e^{-Z^{[3]}}}$<br/>"
-        "The objective is Binary Cross-Entropy with L2 regularization: $\\mathcal{L} = -\\frac{1}{N}\\sum [y \\ln \\hat{y} + (1-y)\\ln(1-\\hat{y})] + \\frac{\\lambda}{2N}\\sum ||W^{[l]}||_F^2$. "
-        "Analytical backpropagation gradients are derived via chain rule: $\\delta^{[3]} = \\hat{y} - y$, "
-        "$\\delta^{[l]} = (\\delta^{[l+1]} (W^{[l+1]})^T) \\odot f'(Z^{[l]})$.<br/>"
+        "<b>Z</b><sup>[1]</sup> = <b>X W</b><sup>[1]</sup> + <b>b</b><sup>[1]</sup>, <b>A</b><sup>[1]</sup> = max(0.01 <b>Z</b><sup>[1]</sup>, <b>Z</b><sup>[1]</sup>)<br/>"
+        "<b>Z</b><sup>[2]</sup> = <b>A</b><sup>[1]</sup><b>W</b><sup>[2]</sup> + <b>b</b><sup>[2]</sup>, <b>A</b><sup>[2]</sup> = max(0.01 <b>Z</b><sup>[2]</sup>, <b>Z</b><sup>[2]</sup>)<br/>"
+        "<b>Z</b><sup>[3]</sup> = <b>A</b><sup>[2]</sup><b>W</b><sup>[3]</sup> + <b>b</b><sup>[3]</sup>, <i>y&#770;</i> = &sigma;(<b>Z</b><sup>[3]</sup>) = 1 / (1 + <i>e</i><sup>-<b>Z</b><sup>[3]</sup></sup>)<br/>"
+        "The objective is Binary Cross-Entropy with L2 regularization: <i>L</i> = -(1/<i>N</i>)&sum; [<i>y</i> ln <i>y&#770;</i> + (1-<i>y</i>) ln(1-<i>y&#770;</i>)] + (&lambda;/2<i>N</i>)&sum; ||<b>W</b><sup>[<i>l</i>]</sup>||<sub><i>F</i></sub><sup>2</sup>. "
+        "Analytical backpropagation gradients are derived via chain rule: &delta;<sup>[3]</sup> = <i>y&#770;</i> - <i>y</i>, "
+        "&delta;<sup>[<i>l</i>]</sup> = (&delta;<sup>[<i>l</i>+1]</sup> (<b>W</b><sup>[<i>l</i>+1]</sup>)<sup><i>T</i></sup>) &odot; <i>f '</i>(<b>Z</b><sup>[<i>l</i>]</sup>).<br/>"
         "Parameters are updated via the Adam (Adaptive Moment Estimation) optimizer with bias correction:",
         body
     ))
+    story.append(make_equation_flowable("$$m_t = \\beta_1 m_{t-1} + (1-\\beta_1)g_t, \\quad v_t = \\beta_2 v_{t-1} + (1-\\beta_2)g_t^2, \\quad \\hat{m}_t = \\frac{m_t}{1-\\beta_1^t}, \\quad \\hat{v}_t = \\frac{v_t}{1-\\beta_2^t}$$"))
+    story.append(make_equation_flowable("$$W^{[l]} \\leftarrow W^{[l]} - \\frac{\\eta}{\\sqrt{\\hat{v}_t} + \\epsilon} \\hat{m}_t - \\frac{\\eta \\lambda}{N} W^{[l]}$$"))
     story.append(Paragraph(
-        "$$m_t = \\beta_1 m_{t-1} + (1-\\beta_1)g_t, \\quad v_t = \\beta_2 v_{t-1} + (1-\\beta_2)g_t^2, \\quad \\hat{m}_t = \\frac{m_t}{1-\\beta_1^t}, \\quad \\hat{v}_t = \\frac{v_t}{1-\\beta_2^t}$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "$$W^{[l]} \\leftarrow W^{[l]} - \\frac{\\eta}{\\sqrt{\\hat{v}_t} + \\epsilon} \\hat{m}_t - \\frac{\\eta \\lambda}{N} W^{[l]}$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "<b>Pure NumPy Implementation Details:</b> Weights initialized via He (Kaiming) normal: $W \\sim \\mathcal{N}(0, \\sqrt{2 / d_{\\text{in}}})$. "
+        "<b>Pure NumPy Implementation Details:</b> Weights initialized via He (Kaiming) normal: <b>W</b> ~ <i>N</i>(0, &radic;(2 / <i>d</i><sub>in</sub>)). "
         "Forward passes, backward passes, and Adam moment updates execute strictly through matrix dot products (`@`) and array slicing.<br/>"
         "<b>Theoretical Limitations:</b> Uncalibrated output probabilities in tail distributions; high training latency relative to linear models.",
         body
@@ -740,16 +804,13 @@ def build_pdf_monograph():
     story.append(Paragraph("Step 3: Stratified K-Fold Cross-Validation & Cost Objective", subsec_heading))
     story.append(Paragraph(
         "<b>Objective:</b> Prevent fold collapse during model validation and replace symmetric log-loss tuning with operational business cost metrics.<br/>"
-        "<b>Mathematical Formulation:</b> Let indices $\\mathcal{I}_1 = \\{i : y_i = 1\\}$ and $\\mathcal{I}_0 = \\{i : y_i = 0\\}$. "
-        "Randomly partition $\\mathcal{I}_1$ into $K=5$ disjoint subsets $\\{F_{1,1}, \\dots, F_{1,K}\\}$ and $\\mathcal{I}_0$ into $\\{F_{0,1}, \\dots, F_{0,K}\\}$. "
-        "The $k$-th validation fold is $V_k = F_{1,k} \\cup F_{0,k}$, guaranteeing that every fold maintains the exact 0.1727% fraud ratio. "
+        "<b>Mathematical Formulation:</b> Let indices <i>I</i><sub>1</sub> = {<i>i</i> : <i>y<sub>i</sub></i> = 1} and <i>I</i><sub>0</sub> = {<i>i</i> : <i>y<sub>i</sub></i> = 0}. "
+        "Randomly partition <i>I</i><sub>1</sub> into $K=5$ disjoint subsets {<i>F</i><sub>1,1</sub>, ..., <i>F</i><sub>1,<i>K</i></sub>} and <i>I</i><sub>0</sub> into {<i>F</i><sub>0,1</sub>, ..., <i>F</i><sub>0,<i>K</i></sub>}. "
+        "The $k$-th validation fold is <i>V<sub>k</sub></i> = <i>F</i><sub>1,<i>k</i></sub> &cup; <i>F</i><sub>0,<i>k</i></sub>, guaranteeing that every fold maintains the exact 0.1727% fraud ratio. "
         "Rather than selecting hyperparameters based on maximum accuracy or minimum cross-entropy, we evaluate models against total financial loss:",
         body
     ))
-    story.append(Paragraph(
-        "$$\\mathcal{L}_{\\text{cost}} = \\sum_{i \\in \\text{FP}} C_{\\text{FP}} + \\sum_{j \\in \\text{FN}} \\text{Amount}_j$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$\\mathcal{L}_{\\text{cost}} = \\sum_{i \\in \\text{FP}} C_{\\text{FP}} + \\sum_{j \\in \\text{FN}} \\text{Amount}_j$$"))
     story.append(Paragraph(
         "<b>Pure NumPy Implementation Details:</b> Programmed custom stratified split generator using index shuffling (`np.random.permutation`) "
         "and array slicing (`np.array_split`), eliminating dependency on scikit-learn's `StratifiedKFold`.<br/>"
@@ -763,22 +824,19 @@ def build_pdf_monograph():
     story.append(Paragraph("Step 4: Gradient Boosted Decision Trees (GBDT) from Scratch", subsec_heading))
     story.append(Paragraph(
         "<b>Objective:</b> Construct an ensemble of non-linear decision stumps targeting residual errors through functional gradient descent.<br/>"
-        "<b>Mathematical Formulation:</b> We minimize negative Bernoulli log-likelihood $\\mathcal{L}(y, F(x)) = -[y F(x) - \\ln(1 + e^{F(x)})]$. "
-        "Initialize model with log-odds prior: $F_0(x) = \\ln\\left(\\frac{\\pi_1}{1 - \\pi_1}\\right) = \\ln(0.001727 / 0.998273) \\approx -6.36$.<br/>"
-        "At stage $m = 1, \\dots, M$ (with $M = 30$ trees):<br/>"
+        "<b>Mathematical Formulation:</b> We minimize negative Bernoulli log-likelihood <i>L</i>(<i>y</i>, <i>F</i>(<i>x</i>)) = -[<i>y F</i>(<i>x</i>) - ln(1 + <i>e</i><sup><i>F</i>(<i>x</i>)</sup>)]. "
+        "Initialize model with log-odds prior: <i>F</i><sub>0</sub>(<i>x</i>) = ln(&pi;<sub>1</sub> / (1 - &pi;<sub>1</sub>)) &asymp; -6.36.<br/>"
+        "At stage <i>m</i> = 1, ..., <i>M</i> (with $M = 30$ trees):<br/>"
         "1. Compute negative gradient (pseudo-residuals) for each sample $i$: "
-        "$r_{im} = -\\left[\\frac{\\partial \\mathcal{L}(y_i, F(x_i))}{\\partial F(x_i)}\\right] = y_i - \\sigma(F_{m-1}(x_i)) = y_i - p_i$.<br/>"
-        "2. Fit a decision stump $h_m(x)$ by scanning feature thresholds to maximize split variance reduction: "
-        "$\\Delta \\text{Var} = \\text{Var}(S) - \\frac{|S_L|}{|S|}\\text{Var}(S_L) - \\frac{|S_R|}{|S|}\\text{Var}(S_R)$.<br/>"
+        "<i>r<sub>im</sub></i> = <i>y<sub>i</sub></i> - <i>p<sub>i</sub></i>.<br/>"
+        "2. Fit a decision stump <i>h<sub>m</sub></i>(<i>x</i>) by scanning feature thresholds to maximize split variance reduction: "
+        "&Delta;Var = Var(<i>S</i>) - (|<i>S<sub>L</sub></i>|/|<i>S</i>|)Var(<i>S<sub>L</sub></i>) - (|<i>S<sub>R</sub></i>|/|<i>S</i>|)Var(<i>S<sub>R</sub></i>).<br/>"
         "3. Compute leaf output values via Newton-Raphson approximation step:",
         body
     ))
+    story.append(make_equation_flowable("$$\\gamma_{jm} = \\frac{\\sum_{x_i \\in R_{jm}} r_{im}}{\\sum_{x_i \\in R_{jm}} p_i (1 - p_i)}$$"))
     story.append(Paragraph(
-        "$$\\gamma_{jm} = \\frac{\\sum_{x_i \\in R_{jm}} r_{im}}{\\sum_{x_i \\in R_{jm}} p_i (1 - p_i)}$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "4. Update ensemble with shrinkage (learning rate $\\eta = 0.1$): $F_m(x) = F_{m-1}(x) + \\eta \\sum_j \\gamma_{jm} \\mathbb{I}(x \\in R_{jm})$.<br/>"
+        "4. Update ensemble with shrinkage (learning rate &eta; = 0.1): <i>F<sub>m</sub></i>(<i>x</i>) = <i>F</i><sub><i>m</i>-1</sub>(<i>x</i>) + &eta; &sum;<sub><i>j</i></sub> &gamma;<sub><i>jm</i></sub> <b>I</b>(<i>x</i> &isin; <i>R<sub>jm</sub></i>).<br/>"
         "<b>Pure NumPy Implementation Details:</b> Quantile-based threshold scanning. Feature values are evaluated across 10 empirical quantiles: "
         "`thresholds = np.percentile(X[:, feat], np.linspace(10, 90, 10))`. Split evaluation is vectorized using boolean mask broadcasting.<br/>"
         "<b>Theoretical Limitations:</b> Tree depth is restricted to shallow stumps/trees to maintain reasonable training latency in pure NumPy without "
@@ -798,26 +856,20 @@ def build_pdf_monograph():
     story.append(Paragraph(
         "<b>Objective:</b> Detect novel zero-day fraud patterns and structural distribution outliers without reliance on ground-truth training labels.<br/>"
         "<b>Mathematical Formulation:</b> An ensemble of $T = 100$ isolation trees (iTrees). Each iTree is constructed by recursively partitioning "
-        "a subsample of $n = 256$ instances. At each node, select a feature $q$ uniformly at random from $\\{1, \\dots, D\\}$ and select a split threshold "
-        "$p$ uniformly at random: $p \\sim \\text{Uniform}(\\min(X_q), \\max(X_q))$. Recursive partitioning terminates when a leaf contains 1 sample or "
-        "the tree reaches maximum depth $h_{\\text{max}} = \\lceil \\log_2(n) \\rceil = 8$.<br/>"
+        "a subsample of $n = 256$ instances. At each node, select a feature $q$ uniformly at random from {1, ..., <i>D</i>} and select a split threshold "
+        "$p$ uniformly at random: <i>p</i> ~ Uniform(min(<i>X<sub>q</sub></i>), max(<i>X<sub>q</sub></i>)). Recursive partitioning terminates when a leaf contains 1 sample or "
+        "the tree reaches maximum depth <i>h</i><sub>max</sub> = &lceil;log<sub>2</sub>(<i>n</i>)&rceil; = 8.<br/>"
         "Let $h(x)$ denote path length (number of edges traversed) to isolate sample $x$. The average path length of an unsuccessful search in a binary search tree is:",
         body
     ))
-    story.append(Paragraph(
-        "$$c(n) = 2\\left(\\ln(n - 1) + 0.5772156649\\right) - \\frac{2(n - 1)}{n}$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$c(n) = 2\\left(\\ln(n - 1) + 0.5772156649\\right) - \\frac{2(n - 1)}{n}$$"))
     story.append(Paragraph(
         "where $0.5772156649$ is the Euler-Mascheroni constant. The anomaly score $s(x, n)$ across an ensemble of $T$ iTrees is bounded in $[0, 1]$:",
         body
     ))
+    story.append(make_equation_flowable("$$s(x, n) = 2^{-\\frac{\\mathbb{E}[h(x)]}{c(n)}}$$"))
     story.append(Paragraph(
-        "$$s(x, n) = 2^{-\\frac{\\mathbb{E}[h(x)]}{c(n)}}$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "Transactions with $s(x, n) \\to 1.0$ exhibit extremely short path lengths, indicating structural anomalies that isolate rapidly.<br/>"
+        "Transactions with <i>s</i>(<i>x</i>, <i>n</i>) &rarr; 1.0 exhibit extremely short path lengths, indicating structural anomalies that isolate rapidly.<br/>"
         "<b>Pure NumPy Implementation Details:</b> Recursive binary trees stored as nested Python dictionaries containing split feature index, threshold, "
         "left child, and right child. Vectorized score evaluation traverses sample arrays through recursive indexing.<br/>"
         "<b>Theoretical Limitations:</b> Lower supervised precision (8.36%) because it isolates any geometric outlier (including extreme legitimate purchases) "
@@ -833,26 +885,17 @@ def build_pdf_monograph():
         "<b>Mathematical Formulation:</b> Standard cross-entropy treats all errors with unit weight. We define instance-specific monetary weights:",
         body
     ))
+    story.append(make_equation_flowable("$$w_i = \\begin{cases} \\frac{\\text{Amount}_i}{\\mu_{\\text{Amount}}} \\times \\alpha & \\text{if } y_i = 1 \\\\ 1.0 & \\text{if } y_i = 0 \\end{cases}$$"))
     story.append(Paragraph(
-        "$$w_i = \\begin{cases} \\frac{\\text{Amount}_i}{\\mu_{\\text{Amount}}} \\times \\alpha & \\text{if } y_i = 1 \\\\ 1.0 & \\text{if } y_i = 0 \\end{cases}$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "where $\\mu_{\\text{Amount}} = \\$88.35$ and $\\alpha = 5.0$ is a positive multiplier. The weighted loss and analytical gradient become:",
+        "where &mu;<sub>Amount</sub> = $88.35 and &alpha; = 5.0 is a positive multiplier. The weighted loss and analytical gradient become:",
         body
     ))
+    story.append(make_equation_flowable("$$\\mathcal{L}_{\\text{weighted}} = -\\frac{1}{N}\\sum_{i=1}^N w_i [y_i \\ln \\hat{y}_i + (1 - y_i) \\ln(1 - \\hat{y}_i)], \\quad \\nabla_W = \\frac{1}{N} X^T (W \\odot (\\hat{y} - y))$$"))
     story.append(Paragraph(
-        "$$\\mathcal{L}_{\\text{weighted}} = -\\frac{1}{N}\\sum_{i=1}^N w_i [y_i \\ln \\hat{y}_i + (1 - y_i) \\ln(1 - \\hat{y}_i)], \\quad \\nabla_W = \\frac{1}{N} X^T (W \\odot (\\hat{y} - y))$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "To evaluate financial preservation, we introduce <b>Dollar Recall</b> ($\\text{Rec}_{\\$}$) alongside traditional <b>Event Recall</b> ($\\text{Rec}_{\\#}$):",
+        "To evaluate financial preservation, we introduce <b>Dollar Recall</b> (Rec<sub>$</sub>) alongside traditional <b>Event Recall</b> (Rec<sub>#</sub>):",
         body
     ))
-    story.append(Paragraph(
-        "$$\\text{Rec}_{\\#} = \\frac{|\\text{TP}|}{|\\text{All Fraud Events}|}, \\quad \\text{Rec}_{\\$} = \\frac{\\sum_{i \\in \\text{TP}} \\text{Amount}_i}{\\sum_{j \\in \\text{All Fraud}} \\text{Amount}_j}$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$\\text{Rec}_{\\#} = \\frac{|\\text{TP}|}{|\\text{All Fraud Events}|}, \\quad \\text{Rec}_{\\$} = \\frac{\\sum_{i \\in \\text{TP}} \\text{Amount}_i}{\\sum_{j \\in \\text{All Fraud}} \\text{Amount}_j}$$"))
     story.append(Paragraph(
         "<b>Pure NumPy Implementation Details:</b> Precomputed 1D weight array broadcasted element-wise across sample gradient matrices.<br/>"
         "<b>Theoretical Limitations:</b> High monetary weighting forces decision boundaries into genuine transaction space for large dollar amounts, "
@@ -872,24 +915,18 @@ def build_pdf_monograph():
     story.append(Paragraph(
         "<b>Objective:</b> Reduce model-specific inductive bias and variance by synthesizing predictions across fundamentally distinct hypothesis classes.<br/>"
         "<b>Mathematical Formulation:</b> Ensembling linear models, decision trees, and neural networks leverages uncorrelated error distributions. "
-        "Let $P_{\\text{LogReg}}(x)$, $P_{\\text{GBDT}}(x)$, and $P_{\\text{MLP}}(x)$ denote posterior probabilities from base models. "
+        "Let <i>P</i><sub>LogReg</sub>(<i>x</i>), <i>P</i><sub>GBDT</sub>(<i>x</i>), and <i>P</i><sub>MLP</sub>(<i>x</i>) denote posterior probabilities from base models. "
         "The soft-voting consensus probability is defined as a convex combination:",
         body
     ))
+    story.append(make_equation_flowable("$$P_{\\text{ensemble}}(x) = w_1 P_{\\text{LogReg}}(x) + w_2 P_{\\text{GBDT}}(x) + w_3 P_{\\text{MLP}}(x)$$"))
     story.append(Paragraph(
-        "$$P_{\\text{ensemble}}(x) = w_1 P_{\\text{LogReg}}(x) + w_2 P_{\\text{GBDT}}(x) + w_3 P_{\\text{MLP}}(x)$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "where weights $w = [0.35, 0.35, 0.30]$ satisfy $\\sum w_i = 1.0$, optimized via out-of-fold grid search to maximize validation ROC-AUC. "
-        "According to ensemble variance reduction theory (Cohn & Mansour, 1996), if model error residuals $\\epsilon_k$ have variance $\\sigma^2$ "
-        "and average pairwise correlation $\\rho < 1$, the ensemble prediction error variance satisfies:",
+        "where weights $w = [0.35, 0.35, 0.30]$ satisfy &sum; <i>w<sub>i</sub></i> = 1.0, optimized via out-of-fold grid search to maximize validation ROC-AUC. "
+        "According to ensemble variance reduction theory (Cohn & Mansour, 1996), if model error residuals &epsilon;<sub><i>k</i></sub> have variance &sigma;<sup>2</sup> "
+        "and average pairwise correlation &rho; &lt; 1, the ensemble prediction error variance satisfies:",
         body
     ))
-    story.append(Paragraph(
-        "$$\\text{Var}(\\epsilon_{\\text{ens}}) = \\rho \\sigma^2 + \\frac{1 - \\rho}{K} \\sigma^2 < \\sigma^2$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$\\text{Var}(\\epsilon_{\\text{ens}}) = \\rho \\sigma^2 + \\frac{1 - \\rho}{K} \\sigma^2 < \\sigma^2$$"))
     story.append(Paragraph(
         "<b>Pure NumPy Implementation Details:</b> Element-wise weighted sum across prediction arrays: `P_ens = 0.35*p1 + 0.35*p2 + 0.30*p3`.<br/>"
         "<b>Theoretical Limitations:</b> Scoring latency equals the cumulative execution time of all three base models; requires probability outputs "
@@ -901,24 +938,18 @@ def build_pdf_monograph():
     # Step 8
     story.append(Paragraph("Step 8: Dynamic Instance-Dependent Bayesian Thresholding", subsec_heading))
     story.append(Paragraph(
-        "<b>Objective:</b> Replace arbitrary static probability thresholds ($p \\ge 0.50$) with rational, transaction-specific risk decisioning grounded in financial expectation.<br/>"
+        "<b>Objective:</b> Replace arbitrary static probability thresholds (<i>p</i> &ge; 0.50) with rational, transaction-specific risk decisioning grounded in financial expectation.<br/>"
         "<b>Mathematical Formulation:</b> Under Bayes Minimum Risk, an automated block or alert is economically justified if and only if the expected cost "
         "of flagging is less than the expected cost of allowing the charge to clear:",
         body
     ))
+    story.append(make_equation_flowable("$<b>E</b>[Cost | Flag] = (1 - <i>p</i>(<i>x</i>)) <i>C</i><sub>FP</sub>$ <br/>"
+        "$<b>E</b>[Cost | Allow] = <i>p</i>(<i>x</i>) <i>C</i><sub>FN</sub>(<i>x</i>) = <i>p</i>(<i>x</i>) Amount(<i>x</i>)$"))
     story.append(Paragraph(
-        "$$\\mathbb{E}[\\text{Cost} | \\text{Flag}] = (1 - p(x)) C_{\\text{FP}} + p(x) C_{\\text{TP}} = (1 - p(x)) C_{\\text{FP}}$$ <br/>"
-        "$$\\mathbb{E}[\\text{Cost} | \\text{Allow}] = p(x) C_{\\text{FN}}(x) + (1 - p(x)) C_{\\text{TN}} = p(x) \\text{Amount}(x)$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "Setting $\\mathbb{E}[\\text{Cost} | \\text{Flag}] < \\mathbb{E}[\\text{Cost} | \\text{Allow}]$ yields the optimal dynamic decision boundary:",
+        "Setting <b>E</b>[Cost | Flag] &lt; <b>E</b>[Cost | Allow] yields the optimal dynamic decision boundary:",
         body
     ))
-    story.append(Paragraph(
-        "$$p^*(x) = \\frac{C_{\\text{FP}}}{C_{\\text{FP}} + \\text{Amount}(x)}$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$<i>p</i>*(<i>x</i>) = <i>C</i><sub>FP</sub> / (<i>C</i><sub>FP</sub> + Amount(<i>x</i>))$"))
 
     # Dynamic Threshold Behavior Table
     dyn_headers = [
@@ -967,31 +998,25 @@ def build_pdf_monograph():
     story.append(Paragraph("Step 9: Focal Loss and Hard Negative Example Mining", subsec_heading))
     story.append(Paragraph(
         "<b>Objective:</b> Prevent the vast majority of easily classified genuine transactions from overwhelming backpropagation gradients during neural network training.<br/>"
-        "<b>Mathematical Formulation:</b> In standard binary cross-entropy, easily classified genuine transactions ($p_t \\ge 0.99$) generate small individual "
-        "losses ($\\approx 0.01$). However, because genuine transactions outnumber frauds by 578:1, the aggregate gradient is dominated by easy negatives, "
-        "washing out minority signal. Lin et al. (2017) formulated Focal Loss by adding a dynamically modulating factor $(1 - p_t)^\\gamma$:",
+        "<b>Mathematical Formulation:</b> In standard binary cross-entropy, easily classified genuine transactions (<i>p<sub>t</sub></i> &ge; 0.99) generate small individual "
+        "losses (&asymp; 0.01). However, because genuine transactions outnumber frauds by 578:1, the aggregate gradient is dominated by easy negatives, "
+        "washing out minority signal. Lin et al. (2017) formulated Focal Loss by adding a dynamically modulating factor (1 - <i>p<sub>t</sub></i>)<sup>&gamma;</sup>:",
         body
     ))
+    story.append(make_equation_flowable("$$\\mathcal{L}_{\\text{FL}}(p_t) = -\\alpha_t (1 - p_t)^\\gamma \\ln(p_t), \\quad \\text{where } p_t = \\begin{cases} p & \\text{if } y = 1 \\\\ 1 - p & \\text{if } y = 0 \\end{cases}$$"))
     story.append(Paragraph(
-        "$$\\mathcal{L}_{\\text{FL}}(p_t) = -\\alpha_t (1 - p_t)^\\gamma \\ln(p_t), \\quad \\text{where } p_t = \\begin{cases} p & \\text{if } y = 1 \\\\ 1 - p & \\text{if } y = 0 \\end{cases}$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "With focusing parameter $\\gamma = 2.0$ and balancing factor $\\alpha = 0.25$:<br/>"
-        "• For an easily classified genuine sample ($p_t = 0.99$), modulating factor is $(1 - 0.99)^2 = 0.0001$, suppressing loss and gradient by <b>10,000×</b>.<br/>"
-        "• For a misclassified fraud sample ($p_t = 0.10$), modulating factor is $(1 - 0.10)^2 = 0.81$, preserving 81% of gradient magnitude.<br/>"
+        "With focusing parameter &gamma; = 2.0 and balancing factor &alpha; = 0.25:<br/>"
+        "• For an easily classified genuine sample (<i>p<sub>t</sub></i> = 0.99), modulating factor is $(1 - 0.99)^2 = 0.0001$, suppressing loss and gradient by <b>10,000×</b>.<br/>"
+        "• For a misclassified fraud sample (<i>p<sub>t</sub></i> = 0.10), modulating factor is $(1 - 0.10)^2 = 0.81$, preserving 81% of gradient magnitude.<br/>"
         "The analytical gradient with respect to logit $z$ is derived via the chain rule as:",
         body
     ))
-    story.append(Paragraph(
-        "$$\\frac{\\partial \\mathcal{L}_{\\text{FL}}}{\\partial z} = \\alpha_t (1 - p_t)^\\gamma \\left( (p - y) + \\gamma p_t \\ln(p_t) (2y - 1) \\right) = \\begin{cases} \\alpha (1-p)^\\gamma \\left[(p - 1) + \\gamma p \\ln(p)\\right] & \\text{if } y = 1 \\\\ (1-\\alpha) p^\\gamma \\left[p - \\gamma (1-p) \\ln(1-p)\\right] & \\text{if } y = 0 \\end{cases}$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$\\frac{\\partial \\mathcal{L}_{\\text{FL}}}{\\partial z} = \\alpha_t (1 - p_t)^\\gamma \\left( (p - y) + \\gamma p_t \\ln(p_t) (2y - 1) \\right) = \\begin{cases} \\alpha (1-p)^\\gamma \\left[(p - 1) + \\gamma p \\ln(p)\\right] & \\text{if } y = 1 \\\\ (1-\\alpha) p^\\gamma \\left[p - \\gamma (1-p) \\ln(1-p)\\right] & \\text{if } y = 0 \\end{cases}$$"))
     story.append(Paragraph(
         "<b>Pure NumPy Implementation Audit:</b> Verified against `Step9_Focal_Loss.ipynb`. The scratch implementation executes these exact derived "
         "expressions (`self.gamma * yh1 * np.log(yh1) + yh1 - 1.0` for positives and `-self.gamma * (1.0 - yh0) * np.log(1.0 - yh0) + yh0` for negatives), "
         "clipping probabilities at $10^{-15}$ to ensure numerical stability.<br/>"
-        "<b>Theoretical Limitations:</b> Highly sensitive to the choice of $\\gamma$; setting $\\gamma > 3.0$ over-suppresses semi-hard negatives, slowing convergence.",
+        "<b>Theoretical Limitations:</b> Highly sensitive to the choice of &gamma;; setting &gamma; &gt; 3.0 over-suppresses semi-hard negatives, slowing convergence.",
         body
     ))
     story.append(Spacer(1, 4))
@@ -1001,21 +1026,18 @@ def build_pdf_monograph():
     story.append(Paragraph(
         "<b>Objective:</b> Train a secondary meta-classifier to learn non-linear optimal weighting among base models without data leakage.<br/>"
         "<b>Mathematical Formulation:</b> Following Wolpert (1992), stacking combines base learners via Out-of-Fold (OOF) cross-validation. "
-        "Partition training data $\\mathcal{D}_{\\text{train}}$ into $K = 5$ stratified folds $\\{F_1, \\dots, F_5\\}$. For each fold $k$:<br/>"
-        "1. Train base models (LogReg, GBDT, MLP) on the remaining 4 folds $\\mathcal{D}_{\\text{train}} \\setminus F_k$.<br/>"
-        "2. Generate out-of-fold predictions on held-out fold $F_k$.<br/>"
-        "Concatenate all OOF predictions to construct the meta-feature matrix $S \\in \\mathbb{R}^{N_{\\text{train}} \\times 3}$:",
+        "Partition training data <i>D</i><sub>train</sub> into $K = 5$ stratified folds {<i>F</i><sub>1</sub>, ..., <i>F</i><sub>5</sub>}. For each fold $k$:<br/>"
+        "1. Train base models (LogReg, GBDT, MLP) on the remaining 4 folds <i>D</i><sub>train</sub> \\ <i>F<sub>k</sub></i>.<br/>"
+        "2. Generate out-of-fold predictions on held-out fold <i>F<sub>k</sub></i>.<br/>"
+        "Concatenate all OOF predictions to construct the meta-feature matrix <i>S</i> &isin; <b>R</b><sup><i>N</i><sub>train</sub>&times;3</sup>:",
         body
     ))
-    story.append(Paragraph(
-        "$$S = [\\hat{P}_{\\text{OOF}}^{\\text{LogReg}}, \\; \\hat{P}_{\\text{OOF}}^{\\text{GBDT}}, \\; \\hat{P}_{\\text{OOF}}^{\\text{MLP}}]$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$S = [\\hat{P}_{\\text{OOF}}^{\\text{LogReg}}, \\; \\hat{P}_{\\text{OOF}}^{\\text{GBDT}}, \\; \\hat{P}_{\\text{OOF}}^{\\text{MLP}}]$$"))
     story.append(Paragraph(
         "A Level-1 Logistic Meta-Learner is trained on $S$ to minimize regularized negative log-likelihood: "
-        "$\\hat{y}_{\\text{meta}} = \\sigma(S W_{\\text{meta}} + b_{\\text{meta}})$. "
-        "During test inference, test features $X_{\\text{test}}$ are passed through base models trained on the full training set to produce "
-        "$S_{\\text{test}}$, which is then evaluated by the meta-learner.<br/>"
+        "<i>y&#770;</i><sub>meta</sub> = &sigma;(<b>S W</b><sub>meta</sub> + <i>b</i><sub>meta</sub>). "
+        "During test inference, test features <i>X</i><sub>test</sub> are passed through base models trained on the full training set to produce "
+        "<i>S</i><sub>test</sub>, which is then evaluated by the meta-learner.<br/>"
         "<b>Pure NumPy Implementation Details:</b> 5-fold cross-validation loop populates matrix $S$, followed by analytical L2-regularized logistic regression.<br/>"
         "<b>Theoretical Limitations:</b> High computational complexity during training; Level-1 learner can overfit if base models produce highly collinear probabilities.",
         body
@@ -1147,8 +1169,8 @@ def build_pdf_monograph():
         "In academic fraud detection literature, evaluating models on a single random 80/20 train/test split is a recognized methodological weakness. "
         "Because the test split contains only ~98 fraud events out of 56,962 transactions, a single split is subject to substantial partition variance: "
         "a model may appear brilliant or mediocre purely based on whether borderline test samples happen to fall on one side of a stochastic boundary plane. "
-        "To rigorously quantify estimator stability and measure true sampling variance, we implemented an enterprise-scale <b>1,000-run Monte Carlo benchmark ($N = 1,000$)</b>. "
-        "Across 1,000 independent pseudo-random seeds ($s \\in \\{1000, 1001, \\dots, 1999\\}$), the raw dataset of 284,807 transactions was repeatedly partitioned "
+        "To rigorously quantify estimator stability and measure true sampling variance, we implemented an enterprise-scale <b>1,000-run Monte Carlo benchmark (<i>N</i> = 1,000)</b>. "
+        "Across 1,000 independent pseudo-random seeds (<i>s</i> &isin; {1000, ..., 1999}), the raw dataset of 284,807 transactions was repeatedly partitioned "
         "via fresh stratified 80/20 splits. All seven candidate model architectures were trained from scratch, yielding a total of 7,000 model fits and "
         "evaluating exactly <b>56,962,000 test transaction classifications</b>.",
         body
@@ -1156,17 +1178,14 @@ def build_pdf_monograph():
 
     story.append(Paragraph("4.2 Split-to-Split Variability & Resampling Dispersion Formulation", subsec_heading))
     story.append(Paragraph(
-        "Let $\\theta_{k,m}$ denote the empirical metric observed for model $m$ on partition $k \\in \\{1, \\dots, N\\}$ ($N = 1,000$). "
-        "We compute the sample mean $\\bar{\\theta}_m$ and sample standard deviation $s_m$:",
+        "Let &theta;<sub><i>k,m</i></sub> denote the empirical metric observed for model $m$ on partition <i>k</i> &isin; {1, ..., <i>N</i>} (<i>N</i> = 1,000). "
+        "We compute the sample mean &theta;&#772;<sub><i>m</i></sub> and sample standard deviation <i>s<sub>m</sub></i>:",
         body
     ))
-    story.append(Paragraph(
-        "$$\\bar{\\theta}_m = \\frac{1}{N}\\sum_{k=1}^N \\theta_{k,m}, \\quad s_m = \\sqrt{\\frac{1}{N - 1}\\sum_{k=1}^N (\\theta_{k,m} - \\bar{\\theta}_m)^2}$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$\\bar{\\theta}_m = \\frac{1}{N}\\sum_{k=1}^N \\theta_{k,m}, \\quad s_m = \\sqrt{\\frac{1}{N - 1}\\sum_{k=1}^N (\\theta_{k,m} - \\bar{\\theta}_m)^2}$$"))
     story.append(Paragraph(
         "To summarize dispersion across the 1,000 random splits, we compute the nominal interval "
-        "$\\bar{\\theta}_m \\pm z_{0.975} \\frac{s_m}{\\sqrt{N}} = \\bar{\\theta}_m \\pm 0.0620 \\cdot s_m$. "
+        "&theta;&#772;<sub><i>m</i></sub> &plusmn; 0.0620 &middot; <i>s<sub>m</sub></i>. "
         "However, this interval requires <b>rigorous statistical interpretation</b> (Dietterich, 1998; Bengio & Grandvalet, 2004):<br/>"
         "• <b>Non-Independence of Repeated Partitions:</b> Although the 1,000 random seeds generate different 80/20 train/test partitions, all splits draw from "
         "the <i>exact same underlying pool of 492 fraud cases</i>. Because test sets share identical observations across runs, the resulting estimates are "
@@ -1211,8 +1230,8 @@ def build_pdf_monograph():
 
     story.append(Paragraph(
         "<b>Table 4.1: Master 1,000-Run Monte Carlo Benchmark Results (N = 1,000 Stratified Partitions):</b><br/>"
-        "All figures report the empirical sample mean $\\bar{\\theta}$ across 1,000 independent runs, accompanied by the 95% CLT Confidence Interval half-width "
-        "($\\pm 0.0620 \\times s$). Fixed threshold $p = 0.50$ applied uniformly across all models. Best metrics highlighted in bold.",
+        "All figures report the empirical sample mean &theta;&#772; across 1,000 independent runs, accompanied by the 95% CLT Confidence Interval half-width "
+        "(&plusmn; 0.0620 &times; <i>s</i>). Fixed threshold <i>p</i> = 0.50 applied uniformly across all models. Best metrics highlighted in bold.",
         body
     ))
 
@@ -1333,10 +1352,10 @@ def build_pdf_monograph():
     story.append(Paragraph(
         "A critical statistical insight emerges from comparing Receiver Operating Characteristic (ROC-AUC) against Precision-Recall (PR-AUC). "
         "All seven models exhibit superficially stellar ROC-AUC scores spanning <b>0.9451 to 0.9808</b>. However, Davis & Goadrich (2006) proved "
-        "that in extreme class rarity ($P(Y=1) \\ll 0.01$), ROC-AUC is misleadingly optimistic because the False Positive Rate denominator ($N_{\\text{neg}} = 56,864$) "
+        "that in extreme class rarity (<i>P</i>(<i>Y</i>=1) &lt;&lt; 0.01), ROC-AUC is misleadingly optimistic because the False Positive Rate denominator (<i>N</i><sub>neg</sub> = 56,864) "
         "is enormous; adding thousands of false alarms barely moves the FPR needle from 0.01 to 0.03, leaving the ROC curve artificially close to the top-left corner.<br/>"
         "In contrast, <b>Precision-Recall AUC (PR-AUC)</b> directly tracks false alarms against true positives in the denominator: "
-        "$\\text{Precision} = \\frac{\\text{TP}}{\\text{TP} + \\text{FP}}$. While Soft-Voting achieves the highest overall ROC-AUC (<b>0.9808</b>), "
+        "Precision = TP / (TP + FP). While Soft-Voting achieves the highest overall ROC-AUC (<b>0.9808</b>), "
         "<b>GBDT achieves the highest operational precision (9.30%) and F1-score (16.76%)</b>, suppressing false alarms to 880.2 FPs and delivering the lowest net loss ($4,369.26).",
         body
     ))
@@ -1460,7 +1479,7 @@ def build_pdf_monograph():
     ]
     rec_rows = [
         [Paragraph("<b>Soft-Voting Ensemble</b> (Fixed)", tbl_cell_bold),
-         Paragraph("Fixed $p \\ge 0.50$", tbl_cell_center),
+         Paragraph("Fixed <i>p</i> &ge; 0.50", tbl_cell_center),
          Paragraph("90.82%", tbl_cell_center),
          Paragraph("4.66%", tbl_cell_center),
          Paragraph("1,819", tbl_cell_center),
@@ -1468,7 +1487,7 @@ def build_pdf_monograph():
          Paragraph("Identical Held-Out Split", tbl_cell_center)],
 
         [Paragraph("<b>Soft-Voting Ensemble</b> (Tuned)", tbl_cell_bold),
-         Paragraph("Tuned $\\tau = 0.83$", tbl_cell_center),
+         Paragraph("Tuned &tau; = 0.83", tbl_cell_center),
          Paragraph("88.78%", tbl_cell_center),
          Paragraph("<b>39.91%</b>", tbl_cell_bold_center),
          Paragraph("<b>131</b>", tbl_cell_bold_center),
@@ -1476,7 +1495,7 @@ def build_pdf_monograph():
          Paragraph("Identical Held-Out Split", tbl_cell_center)],
 
         [Paragraph("<b>GBDT Classifier</b> (Fixed)", tbl_cell_bold),
-         Paragraph("Fixed $p \\ge 0.50$", tbl_cell_center),
+         Paragraph("Fixed <i>p</i> &ge; 0.50", tbl_cell_center),
          Paragraph("90.82%", tbl_cell_center),
          Paragraph("8.27%", tbl_cell_center),
          Paragraph("987", tbl_cell_center),
@@ -1484,7 +1503,7 @@ def build_pdf_monograph():
          Paragraph("Identical Held-Out Split", tbl_cell_center)],
 
         [Paragraph("<b>GBDT Classifier</b> (Tuned)", tbl_cell_bold),
-         Paragraph("Tuned $\\tau = 0.83$", tbl_cell_center),
+         Paragraph("Tuned &tau; = 0.83", tbl_cell_center),
          Paragraph("85.71%", tbl_cell_center),
          Paragraph("<b>59.57%</b>", tbl_cell_bold_center),
          Paragraph("<b>57</b>", tbl_cell_bold_center),
@@ -1492,7 +1511,7 @@ def build_pdf_monograph():
          Paragraph("Identical Held-Out Split", tbl_cell_center)],
 
         [Paragraph("<b>Baseline LogReg</b> (Fixed)", tbl_cell_bold),
-         Paragraph("Fixed $p \\ge 0.50$", tbl_cell_center),
+         Paragraph("Fixed <i>p</i> &ge; 0.50", tbl_cell_center),
          Paragraph("91.84%", tbl_cell_center),
          Paragraph("5.20%", tbl_cell_center),
          Paragraph("1,640", tbl_cell_center),
@@ -1500,7 +1519,7 @@ def build_pdf_monograph():
          Paragraph("Identical Held-Out Split", tbl_cell_center)],
 
         [Paragraph("<b>Baseline LogReg</b> (Tuned)", tbl_cell_bold),
-         Paragraph("Tuned $\\tau = 0.83$", tbl_cell_center),
+         Paragraph("Tuned &tau; = 0.83", tbl_cell_center),
          Paragraph("88.78%", tbl_cell_center),
          Paragraph("18.63%", tbl_cell_center),
          Paragraph("<b>380</b>", tbl_cell_bold_center),
@@ -1538,24 +1557,21 @@ def build_pdf_monograph():
         "In enterprise credit card issuing and acquiring operations, total expected operating loss is defined as:",
         body
     ))
-    story.append(Paragraph(
-        "$$\\mathbb{E}[\\text{Loss}] = \\sum_{i \\in \\text{FN}} C_{\\text{FN}}(x_i) + \\sum_{j \\in \\text{FP}} C_{\\text{FP}} = \\sum_{i \\in \\text{FN}} \\text{Amount}_i \\cdot (1 - \\rho) + \\sum_{j \\in \\text{FP}} (c_{\\text{comm}} + c_a + c_f)$$",
-        math_block
-    ))
+    story.append(make_equation_flowable("$$\\mathbb{E}[\\text{Loss}] = \\sum_{i \\in \\text{FN}} C_{\\text{FN}}(x_i) + \\sum_{j \\in \\text{FP}} C_{\\text{FP}} = \\sum_{i \\in \\text{FN}} \\text{Amount}_i \\cdot (1 - \\rho) + \\sum_{j \\in \\text{FP}} (c_{\\text{comm}} + c_a + c_f)$$"))
     story.append(Paragraph(
         "where each variable is grounded in institutional banking realities:",
         body
     ))
     cost_decomp_items = [
-        "<b>Direct Stolen Fraud Loss ($C_{\\text{FN}}$):</b> Governed by transaction monetary face value $\\text{Amount}(x)$ and fund recovery rate $\\rho \\in [0, 1]$. "
-        "In CNP transactions, goods or digital gift cards are redeemed instantaneously; empirical recovery rates are near zero ($\\rho \\approx 0.00$). "
-        "Under US Regulation E and Visa Zero Liability, the issuing bank must fully indemnify cardholders. Hence, $C_{\\text{FN}}(x) = \\text{Amount}(x)$.",
-        "<b>Communication & Gateway Fee ($c_{\\text{comm}}$):</b> Direct vendor cost of executing verification. Automated SMS gateway delivery costs "
+        "<b>Direct Stolen Fraud Loss (<i>C</i><sub>FN</sub>):</b> Governed by transaction monetary face value Amount(<i>x</i>) and fund recovery rate &rho; &isin; [0, 1]. "
+        "In CNP transactions, goods or digital gift cards are redeemed instantaneously; empirical recovery rates are near zero (&rho; &asymp; 0.00). "
+        "Under US Regulation E and Visa Zero Liability, the issuing bank must fully indemnify cardholders. Hence, <i>C</i><sub>FN</sub>(<i>x</i>) = Amount(<i>x</i>).",
+        "<b>Communication & Gateway Fee (<i>c</i><sub>comm</sub>):</b> Direct vendor cost of executing verification. Automated SMS gateway delivery costs "
         "approximately $0.02–$0.05 per message; interactive voice response (IVR) calls cost ~$0.15–$0.25; in-app push notification challenges cost < $0.005.",
-        "<b>Analyst Labor & Triage Investigation Cost ($c_a$):</b> The cost of human security analyst queue review. Assuming a fully loaded fraud analyst "
+        "<b>Analyst Labor & Triage Investigation Cost (<i>c<sub>a</sub></i>):</b> The cost of human security analyst queue review. Assuming a fully loaded fraud analyst "
         "compensation of $35.00/hour ($70,000/year base + benefits) and an average manual investigation handling time of 3.0 minutes per flagged account, "
         "the marginal triage cost is $1.75 per false alarm.",
-        "<b>Customer Brand Attrition & Friction Cost ($c_f$):</b> The economic cost of customer insult. Javelin Strategy & Research (2021) demonstrated that "
+        "<b>Customer Brand Attrition & Friction Cost (<i>c<sub>f</sub></i>):</b> The economic cost of customer insult. Javelin Strategy & Research (2021) demonstrated that "
         "32% of cardholders reduce card usage or churn entirely following an embarrassing false positive decline at a physical POS terminal, "
         "costing banks an estimated $0.70–$1.20 in annualized interchange lifetime value."
     ]
@@ -1567,14 +1583,14 @@ def build_pdf_monograph():
         "To ensure rigorous academic transparency, we explicitly delineate between published theoretical foundations and project modeling parameters:<br/>"
         "• <b>Theoretical Foundations (Bahnsen et al., 2015; Elkan, 2001):</b> Bahnsen, Aouada, Stojanovic, & Ottersten (2015) in <i>Expert Systems with "
         "Applications</i> established the mathematical instance-dependent Bayes Minimum Risk (BMR) cost matrix, proving that optimal decision rules require "
-        "weighting false negatives by transaction face value $\\text{Amount}(x)$ against an administrative cost $c_a$. In their simulations, $c_a$ was varied "
-        "parametrically ($c_a \\in [2, 10]$) as an abstract experimental parameter to demonstrate decision frontier sensitivity. Similarly, Elkan (2001) "
+        "weighting false negatives by transaction face value Amount(<i>x</i>) against an administrative cost <i>c<sub>a</sub></i>. In their simulations, <i>c<sub>a</sub></i> was varied "
+        "parametrically (<i>c<sub>a</sub></i> &isin; [2, 10]) as an abstract experimental parameter to demonstrate decision frontier sensitivity. Similarly, Elkan (2001) "
         "proved the foundational theorem for cost-proportionate dataset sampling and threshold adjustment.<br/>"
         "• <b>Operational Queue Constraints (Dal Pozzolo et al., 2014, 2015):</b> Dal Pozzolo et al. (2014, 2015) examined commercial fraud operations "
         "from a practitioner perspective, proving that fraud screening is fundamentally constrained by <b>investigator queue capacity</b> (e.g., security "
-        "teams can only review the top-$k \\approx 100$ alerts per day). They demonstrated that alert volume dictates operational viability, but they did not "
+        "teams can only review the top-<i>k</i> &asymp; 100 alerts per day). They demonstrated that alert volume dictates operational viability, but they did not "
         "assert an empirical universal dollar figure of $2.50.<br/>"
-        "• <b>Project Engineering Parameter Synthesis ($C_{\\text{FP}} = \\$2.50$):</b> We explicitly treat $C_{\\text{FP}} = \\$2.50 as a synthesized "
+        "• <b>Project Engineering Parameter Synthesis (<i>C</i><sub>FP</sub> = $2.50):</b> We explicitly treat $C_{\\text{FP}} = \\$2.50 as a synthesized "
         "project benchmark assumption, calibrated from industrial cost components: $c_{\\text{comm}} = \\$0.05 (carrier SMS challenge) + "
         "$c_a = \\$1.75 (3-minute analyst triage @ $35/hr) + $c_f = \\$0.70 (amortized customer churn friction). "
         "Because operational overhead varies across institutions, Section 5.3 evaluates multi-tier sensitivity across five diverse cost regimes ($0.50 to $10.00).",
@@ -1591,8 +1607,8 @@ def build_pdf_monograph():
     story.append(Paragraph(
         "<b>5.3 Multi-Tier Sensitivity Analysis:</b> To evaluate how model ranking adapts across disparate operational environments "
         "(from low-cost automated app push challenges to high-overhead manual phone investigations), we evaluated total expected financial loss "
-        "$\\mathbb{E}[\\text{Loss}] = (\\text{FP} \\times C_{\\text{FP}}) + \\text{Missed Stolen Dollars}$ across 1,000 Monte Carlo runs for "
-        "$C_{\\text{FP}} \\in [\\$0.50, \\$1.00, \\$2.50, \\$5.00, \\$10.00]$:",
+        "<b>E</b>[Loss] = (FP &times; <i>C</i><sub>FP</sub>) + Missed Stolen Fraud Loss across 1,000 Monte Carlo runs for "
+        "<i>C</i><sub>FP</sub> &isin; [$0.50, $1.00, $2.50, $5.00, $10.00]:",
         body
     ))
 
@@ -1680,28 +1696,25 @@ def build_pdf_monograph():
     story.append(Paragraph("5.4 Consistency Verification & Breakeven Frontiers Across Candidate Architectures", subsec_heading))
     story.append(Paragraph(
         "<b>Rigorous Consistency Verification on Model Rankings:</b> A central finding in Table 5.1 is that <b>Soft-Voting Ensemble minimizes loss ($2,485.42) "
-        "when $C_{\\text{FP}} \\le \\$0.64$</b>, whereas <b>GBDT Classifier minimizes loss ($4,369.26) across all mainstream operational costs ($C_{\\text{FP}} \\ge \\$0.64$)</b>. "
-        "This ranking inversion is verified against the <b>exact same cost formula, model predictions, and test splits ($p = 0.50$ fixed cutoff)</b>:<br/>"
-        "Each model's total cost function is a straight line: $\\mathcal{L}(C_{\\text{FP}}) = \\bar{\\text{FP}} \\cdot C_{\\text{FP}} + \\bar{\\text{FN}}_{\\$}$, "
-        "where slope is false-positive count $\\bar{\\text{FP}}$ and y-intercept is unpenalized missed fraud loss $\\bar{\\text{FN}}_{\\$}$. "
+        "when <i>C</i><sub>FP</sub> &le; $0.64</b>, whereas <b>GBDT Classifier minimizes loss ($4,369.26) across all mainstream operational costs (<i>C</i><sub>FP</sub> &ge; $0.64)</b>. "
+        "This ranking inversion is verified against the <b>exact same cost formula, model predictions, and test splits (<i>p</i> = 0.50 fixed cutoff)</b>:<br/>"
+        "Each model's total cost function is a straight line: <i>L</i>(<i>C</i><sub>FP</sub>) = FP&#772; &middot; <i>C</i><sub>FP</sub> + FN&#772;<sub>$</sub>, "
+        "where slope is false-positive count FP&#772; and y-intercept is unpenalized missed fraud loss FN&#772;<sub>$</sub>. "
         "Soft-Voting catches $577.95 more fraud than GBDT ($1,590.85 missed vs $2,168.80), giving it a lower y-intercept. "
         "However, Soft-Voting generates 908.95 more false positives (1,789.14 vs 880.19), giving it a steeper slope. "
-        "At $C_{\\text{FP}} = \\$0.50$, the financial penalty of those 908.95 extra false alarms is only $908.95 \\times \\$0.50 = \\$454.48$. "
+        "At <i>C</i><sub>FP</sub> = $0.50, the financial penalty of those 908.95 extra false alarms is only 908.95 &times; $0.50 = $454.48. "
         "Because fraud savings ($577.95) exceed alert costs ($454.48), Soft-Voting gains a net financial advantage of <b>+$123.47</b> over GBDT. "
-        "By equating the two cost lines, we analytically solve for the <b>exact breakeven cost</b> $C_{\\text{FP}}^*$:",
+        "By equating the two cost lines, we analytically solve for the <b>exact breakeven cost</b> <i>C</i><sub>FP</sub>*:",
         body
     ))
+    story.append(make_equation_flowable("$$C_{\\text{FP}}^* = \\frac{\\bar{\\text{FN}}_{\\$, A} - \\bar{\\text{FN}}_{\\$, B}}{\\bar{\\text{FP}}_B - \\bar{\\text{FP}}_A}$$"))
     story.append(Paragraph(
-        "$$C_{\\text{FP}}^* = \\frac{\\bar{\\text{FN}}_{\\$, A} - \\bar{\\text{FN}}_{\\$, B}}{\\bar{\\text{FP}}_B - \\bar{\\text{FP}}_A}$$",
-        math_block
-    ))
-    story.append(Paragraph(
-        "• <b>Soft-Voting vs. GBDT Classifier:</b> $C_{\\text{FP}}^* = \\frac{\\$2,168.80 - \\$1,590.85}{1,789.14 - 880.19} = \\frac{\\$577.95}{908.95} = \\mathbf{\\$0.6358}$. "
-        "For any alert cost below $0.6358, Soft-Voting is mathematically guaranteed to minimize loss under the exact same fixed cutoff ($p=0.50$); above $0.6358, GBDT wins.<br/>"
-        "• <b>GBDT vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,168.80 - \\$1,770.57}{1,420.59 - 880.19} = \\frac{\\$398.23}{540.40} = \\mathbf{\\$0.7369}$. GBDT is optimal for all costs above 73.7 cents.<br/>"
-        "• <b>Cost-Sensitive LogReg vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$1,770.57 - \\$663.85}{8,444.07 - 1,420.59} = \\frac{\\$1,106.72}{7,023.48} = \\mathbf{\\$0.1576}$. Viable only below 15.8 cents.<br/>"
-        "<b>Fixed vs. Dynamic Bayes Thresholding Paradigm:</b> Under fixed thresholding ($p=0.50$), rankings shift along linear cost frontiers as slopes trade off against intercepts. "
-        "Under dynamic Bayesian thresholding ($p^*(x) = \\frac{C_{\\text{FP}}}{C_{\\text{FP}} + \\text{Amount}(x)}$), changing $C_{\\text{FP}}$ dynamically shifts the probability cutoff curve, "
+        "• <b>Soft-Voting vs. GBDT Classifier:</b> <i>C</i><sub>FP</sub>* = ($2,168.80 - $1,590.85) / (1,789.14 - 880.19) = $577.95 / 908.95 = <b>$0.6358</b>. "
+        "For any alert cost below $0.6358, Soft-Voting is mathematically guaranteed to minimize loss under the exact same fixed cutoff (<i>p</i> = 0.50); above $0.6358, GBDT wins.<br/>"
+        "• <b>GBDT vs. Baseline LogReg:</b> <i>C</i><sub>FP</sub>* = ($2,168.80 - $1,770.57) / (1,420.59 - 880.19) = $398.23 / 540.40 = <b>$0.7369</b>. GBDT is optimal for all costs above 73.7 cents.<br/>"
+        "• <b>Cost-Sensitive LogReg vs. Baseline LogReg:</b> <i>C</i><sub>FP</sub>* = ($1,770.57 - $663.85) / (8,444.07 - 1,420.59) = $1,106.72 / 7,023.48 = <b>$0.1576</b>. Viable only below 15.8 cents.<br/>"
+        "<b>Fixed vs. Dynamic Bayes Thresholding Paradigm:</b> Under fixed thresholding (<i>p</i> = 0.50), rankings shift along linear cost frontiers as slopes trade off against intercepts. "
+        "Under dynamic Bayesian thresholding (<i>p</i>*(<i>x</i>) = <i>C</i><sub>FP</sub> / (<i>C</i><sub>FP</sub> + Amount(<i>x</i>))), changing <i>C</i><sub>FP</sub> dynamically shifts the probability cutoff curve, "
         "altering the decision boundary directly. Both paradigms confirm the same operational reality: low-cost automated verification favors aggressive fraud capture (Soft-Voting), "
         "while standard review mandates strict false-positive suppression (GBDT).",
         body
@@ -1812,9 +1825,9 @@ def build_pdf_monograph():
         "<b>3. Resampling from a Finite Minority Pool:</b> Although the 100-run Monte Carlo protocol varies the 80/20 partitioning across 100 seeds, "
         "all test partitions draw from the <i>same underlying pool of 492 fraud events</i>. Consequently, our standard error estimates quantify "
         "partition stability across this specific sample, but they cannot evaluate generalization across completely unseen fraud attack vectors.",
-        "<b>4. Static Review Cost Assumptions:</b> We standardized $C_{\\text{FP}} = \\$2.50$ and $C_{\\text{FN}} = \\text{Amount}$. In practice, "
+        "<b>4. Static Review Cost Assumptions:</b> We standardized <i>C</i><sub>FP</sub> = $2.50 and <i>C</i><sub>FN</sub> = Amount. In practice, "
         "customer lifetime value (CLV) is heterogeneous: declining a ultra-high-net-worth private banking client incurs far higher friction than "
-        "declining an inactive debit card account. Production models must parameterize $C_{\\text{FP}}$ by individual cardholder churn risk."
+        "declining an inactive debit card account. Production models must parameterize <i>C</i><sub>FP</sub> by individual cardholder churn risk."
     ]
     for li in lim_items:
         story.append(Paragraph(f"• {li}", body))
