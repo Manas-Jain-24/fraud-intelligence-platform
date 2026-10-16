@@ -20,6 +20,21 @@ This standalone report presents an exhaustive empirical analysis of the **1,000-
 
 ---
 
+## Everyday Plain-English Guide: Making Sense of the Numbers
+
+To ensure these results are accessible to all evaluators, students, and banking executives, the table below translates traditional machine learning metrics into plain everyday concepts:
+
+| Metric | Everyday Banking Analogy | What the Real Numbers Mean for You |
+| :--- | :--- | :--- |
+| **The Security Catch Rate** *(Event Recall: 90% vs 95%)* | If **100 thieves** try to steal credit cards today, how many get blocked at the door? | A 90% catch rate stops 90 thieves and lets 10 slip through. Cost-Sensitive LogReg stops 95 thieves, while GBDT stops 88. |
+| **The Smoke Alarm Trust** *(Precision: 9.3% vs 1.1%)* | When the smoke alarm screams, is there real fire or just burnt toast? | At **9.30% precision (GBDT)**, 1 out of 11 alarms is an actual criminal. At **1.11% precision (Cost-Sens)**, **90 out of 91 alarms are burnt toast**! |
+| **Queue Overload** *(False Positives: 880 vs 8,444)* | Do your security guards spend their day catching crooks or apologizing to angry shoppers? | Cost-Sensitive triggers **8,444 false alarms** per split (analysts spend 99% of their day clearing innocent people). GBDT cuts that down to **880 alarms**. |
+| **The Bank's Total Bill** *(Net Loss: \$4,369 vs \$21,774)* | Saving \$1,000 of stolen goods isn't smart if you spend \$21,000 on private detectives to do it! | The bank pays for missed fraud (\$1/dollar) + investigator time (\$2.50/alarm). GBDT's total bill is **\$4,369**, beating Cost-Sensitive's bill of **\$21,774** by over \$17,400. |
+| **The Worst-Day / Storm Test** *(Tail Risk: CVaR \$8,118 vs \$27,285)* | On an average sunny Tuesday, models look fine. What happens on Black Friday when bot syndicates attack? | In the worst 1% nightmare days, GBDT caps the damage at **\$8,118**. Cost-Sensitive LogReg's bill explodes to **\$27,285**. |
+| **The Channel Rule** *(Breakeven Cost: \$0.64)* | Are you verifying fraud by sending an app push button, or calling them on the phone? | If verification costs **under 64¢** (instant mobile biometric challenge), **Soft-Voting wins**. If it costs **over 64¢** (human call center), **GBDT wins**. |
+
+---
+
 ## 1. Monte Carlo Simulation Protocol & Statistical Design
 
 ### 1.1 Resampling Architecture
@@ -44,59 +59,19 @@ With 1,000 runs, the standard error of the mean is reduced by over **96.8%** rel
 
 ---
 
-## 2. Plain-English Metric Interpretation Guide
+## 2. The "Recall Fallacy" & Metric Trade-Off Curve
 
-In extreme class rarity (0.172%), traditional symmetric statistics fail. The glossary below translates every metric into operational banking reality:
+In naive machine learning evaluations, practitioners assume that higher recall is always better. Figure 2 illustrates the empirical reality across our 1,000 simulation runs: as models push from 88% recall to 95% recall, the relationship between caught fraud and false alarms is an **exponential hockey-stick explosion**:
 
-### 1. Event Recall (Sensitivity / True Positive Rate - TPR)
-* **Formula:** $\frac{\text{TP}}{\text{TP} + \text{FN}} = \frac{\text{Caught Fraud Count}}{\text{Total Fraud Count}}$
-* **What it Represents:** The percentage of actual criminal attempts caught by the system.
-* **Banking Reality:** If a bank faces 100 fraudulent transactions and the model has 90% recall, 90 attacks are blocked and 10 slip through. Maximizing recall without monitoring false alarms causes queue saturation.
+![Figure 2: The Recall Fallacy](figures_statistical/fig2_recall_vs_false_alarms.png)
 
-### 2. Dollar Recall (Monetary Recovery Rate)
-* **Formula:** $\frac{\sum_{i \in \text{TP}} \text{Amount}_i}{\sum_{\text{All Fraud}} \text{Amount}_i} = \frac{\text{Stolen Capital Prevented}}{\text{Total Stolen Capital Attempted}}$
-* **What it Represents:** The fraction of *stolen monetary capital* recovered, as opposed to transaction count.
-* **Banking Reality:** Card transactions vary from \$0.01 authorization tests to \$4,000 electronics purchases. Catching one \$4,000 fraud recovers more funds than catching four hundred \$5 frauds. Dollar recall tracks real capital preservation.
+> [!NOTE]
+> **Figure 2 Operational Takeaway:**  
+> GBDT Classifier operates in the highly efficient 'Manageable Analyst Triage Zone' with 88.43% recall and only 880.2 false alarms (1.55% FPR). In stark contrast, Cost-Sensitive Logistic Regression forces the boundary outward to capture an additional 7.10% of fraud (95.53% recall), which causes an astronomical **860% surge in false alarms (8,444.1 FPs)**. In an issuing bank with 50,000 daily card transactions, this flood of 8,400 false declines exhausts call centers and drives legitimate customers away.
 
-### 3. Precision (Positive Predictive Value - PPV)
-* **Formula:** $\frac{\text{TP}}{\text{TP} + \text{FP}} = \frac{\text{True Fraudsters Flagged}}{\text{Total Transactions Flagged}}$
-* **What it Represents:** The trustworthiness of the alarm. When the model flags a card, how often is it an actual criminal?
-* **Banking Reality:** In extreme rarity, precision is compressed. **GBDT’s precision of 9.30%** means that approximately **1 out of every 11 alerts sent to analysts is an actual fraudster**—a strong operational ratio for automated card screening. In contrast, **Cost-Sensitive LogReg’s precision of 1.11%** means that **90 out of 91 alerts are completely innocent cardholders**.
-
-### 4. False Discovery Rate (FDR = $1 - \text{Precision}$)
-* **Formula:** $\frac{\text{FP}}{\text{TP} + \text{FP}}$
-* **What it Represents:** The percentage of false alarms inside the investigation queue.
-* **Banking Reality:** For Cost-Sensitive LogReg, FDR is **98.89%** (analysts spend 99% of their working hours clearing innocent customers). For GBDT, FDR drops to **90.70%**, roughly quadrupling investigative triage efficiency.
-
-### 5. False Positive Rate (FPR) vs. Specificity
-* **Formula:** $\text{FPR} = \frac{\text{FP}}{\text{FP} + \text{TN}} = \frac{\text{Innocent Cards Flagged}}{\text{Total Legitimate Transactions}}, \quad \text{Specificity} = 1 - \text{FPR}$
-* **What it Represents:** The probability that a legitimate cardholder's transaction will be erroneously declined or challenged.
-* **Regulatory Distinction (PSD2 SCA TRA):** Under European Payment Services Directive 2 (PSD2), Transaction Risk Analysis (TRA) allows exemptions from two-factor authentication only if the issuer's rolling **gross fraud rate** stays below statutory ceilings (e.g., 0.01% / 1 bps).  
-  * **Clarification:** Model FPR and Regulatory Fraud Rate are mathematically distinct concepts. An FPR of 1.55% (GBDT) does **not** automatically ensure PSD2 compliance, because statutory TRA depends strictly on gross fraud volume relative to total transaction turnover.
-
-### 6. F1-Score (Harmonic Mean of Precision and Recall)
-* **Formula:** $2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}$
-* **What it Represents:** The harmonic balance between catching fraud (recall) and avoiding false alarms (precision).
-* **Banking Reality:** GBDT leads the entire benchmark with an $F_1$ of **16.76%**, compared to **2.18%** for Cost-Sensitive LogReg.
-
-### 7. ROC-AUC vs. PR-AUC (The Rare-Event Pitfall)
-* **ROC-AUC:** Measures the probability that a randomly chosen fraudster receives a higher risk score than a randomly chosen genuine transaction across all thresholds.
-* **The Rare-Event Pitfall (Davis & Goadrich, 2006):** In a test split of 56,962 transactions, 56,864 are genuine. Adding 1,000 false alarms barely moves the FPR from 0.010 to 0.027. Because the negative denominator is massive, ROC-AUC remains high (>0.97) even when thousands of false positives are ruining operations.
-* **PR-AUC:** Plots Precision against Recall directly without true negatives in the denominator, exposing real triage operational performance.
-
-### 8. Institutional Cost Function ($C_{\text{FP}} = \$2.50$, $C_{\text{FN}} = \text{Amount}$)
-Expected operational loss on the bank's income statement is defined as:
-$$\text{Net Loss} = \sum_{i \in \text{FN}} \text{Amount}_i \cdot (1 - \rho) + \sum_{j \in \text{FP}} (c_{\text{comm}} + c_a + c_f)$$
-* **$C_{\text{FN}}$ (Missed Fraud):** Under **US Regulation E (12 CFR Part 1005)** and card network Zero Liability rules, consumers are indemnified for unauthorized card-not-present fraud. The issuing bank absorbs 100% of the stolen amount: $C_{\text{FN}}(x) = \text{Amount}(x)$ (assuming zero recovery $\rho \approx 0$).
-* **$C_{\text{FP}}$ (False Alarm Overhead):** Synthesized as **\$2.50**, decomposed into:
-  1. $c_{\text{comm}} = \$0.05$: SMS gateway or in-app push notification costs.
-  2. $c_a = \$1.75$: Security analyst triage labor (3.0 minutes @ \$35.00/hour fully loaded).
-  3. $c_f = \$0.70$: Cardholder friction, call center inquiries, and long-term customer churn hazard.
-
-### 9. Value-at-Risk ($\text{VaR}_{99\%}$) and Conditional Value-at-Risk ($\text{CVaR}_{99\%}$)
-* **$\text{VaR}_{99\%}$:** The loss boundary that is exceeded in only 1% of market scenarios.
-* **$\text{CVaR}_{99\%}$ (Expected Shortfall):** The average expected loss during that worst 1% of scenarios ($\mathbb{E}[L \mid L \ge \text{VaR}_{99\%}]$).
-* **Banking Reality:** Measures institutional resilience against coordinated criminal attacks. **GBDT limits worst-case tail loss to $\text{CVaR}_{99\%} = \mathbf{\$8,117.52}$**, whereas **Cost-Sensitive LogReg explodes to $\mathbf{\$27,284.65}$**.
+### Regulatory Distinction (PSD2 SCA TRA vs. Model FPR):
+Under European Payment Services Directive 2 (PSD2), Transaction Risk Analysis (TRA) allows exemptions from two-factor authentication only if the issuer's rolling **gross fraud rate** stays below statutory ceilings (e.g., 0.01% / 1 bps).  
+* **Clarification:** Model FPR and Regulatory Fraud Rate are mathematically distinct concepts. An FPR of 1.55% (GBDT) does **not** automatically ensure PSD2 compliance, because statutory TRA depends strictly on gross fraud volume relative to total transaction turnover.
 
 ---
 
@@ -115,6 +90,14 @@ Values represent the **Sample Mean $\pm$ 95% CLT Confidence Interval Half-Width*
 | **5. Isolation Forest** (Unsup.) | 60.46% ± 0.60% | 57.48% ± 0.91% | 8.22% ± 0.12% | 14.40% ± 0.19% | 0.9451 ± 0.0009 | **1.21% ± 0.02%** | \$6,827 ± \$136 | **688.8 ± 10.2** | \$5,067 ± \$122 | \$6,789 ± \$122 |
 | **6. Soft-Voting Ensemble** | 91.12% ± 0.17% | 86.91% ± 0.54% | 4.82% ± 0.03% | 9.15% ± 0.06% | **0.9808 ± 0.0005** | 3.15% ± 0.03% | \$10,303 ± \$128 | 1,789.1 ± 14.3 | \$1,591 ± \$72 | \$6,064 ± \$72 |
 | **7. Stacked Meta-Learner** | 91.86% ± 0.17% | 87.96% ± 0.53% | 3.63% ± 0.02% | 6.97% ± 0.04% | 0.9793 ± 0.0005 | 4.26% ± 0.03% | \$10,430 ± \$129 | 2,421.5 ± 17.8 | \$1,464 ± \$73 | \$7,518 ± \$73 |
+
+### Net Operational Loss Distribution Across 1,000 Runs
+
+![Figure 1: Net Financial Loss Distribution Boxplots](figures_statistical/fig1_loss_distribution_boxplots.png)
+
+> [!TIP]
+> **Figure 1 Operational Takeaway:**  
+> Across 1,000 independent partitions, GBDT Classifier maintains the tightest interquartile range (IQR) and lowest median loss (\$4,194.31), with a sample mean of \$4,369.26. Notice that Cost-Sensitive Logistic Regression is completely separated at the top of the scale (\$21,774.01), proving that its poor financial performance is an intrinsic mathematical property of its decision boundary rather than bad luck on a single random split.
 
 ---
 
@@ -139,7 +122,9 @@ $$\text{Total Net Loss} = (\bar{\text{FP}} \times \$2.50) + \bar{\text{FN}}_{\$}
 
 ## 5. Tail-Risk & Loss Distribution Analysis
 
-Average loss does not measure exposure to coordinated bot attacks or seasonal shopping surges. We evaluate the shape and risk tail of each model's loss distribution over the 1,000 runs:
+Average loss evaluates expected daily drag, but fails to capture vulnerability to criminal bot spikes or organized fraud waves. The chart and table below detail the empirical loss distribution, skewness, kurtosis, and tail-risk metrics (VaR / CVaR) across 1,000 runs:
+
+![Figure 4: Tail Risk Exposure](figures_statistical/fig4_tail_risk_var_cvar.png)
 
 ### Table 5.1: Empirical Loss Distributions & Tail-Risk Profiles ($N = 1,000$ Runs)
 
@@ -153,72 +138,29 @@ Average loss does not measure exposure to coordinated bot attacks or seasonal sh
 | **6. Soft-Voting Ensemble** | \$6,063.70 | \$5,858.76 | \$1,160.08 | \$8,281.75 | \$9,174.48 | \$9,396.16 | +0.70 | -0.03 |
 | **7. Stacked Meta-Learner** | \$7,518.19 | \$7,315.78 | \$1,185.64 | \$9,773.20 | \$10,673.71 | \$10,885.98 | +0.62 | +0.01 |
 
-### Key Risk Findings:
-1. **Lowest Extreme Exposure:** **GBDT achieves the lowest tail risk across all models**, with a 99% Value-at-Risk of **\$7,622.60** and a 99% Conditional Value-at-Risk of **\$8,117.52**. Even in the worst 1% of market scenarios, GBDT limits institutional downside.
-2. **Catastrophic Exposure in Cost-Sensitive Models:** Cost-Sensitive Logistic Regression exhibits an extreme right-tail loss: $\text{VaR}_{99\%} = \$26,449.77$ and $\text{CVaR}_{99\%} = \$27,284.65$. Under stress conditions, its flood of false alerts creates heavy operational drag.
+> [!IMPORTANT]
+> **Figure 4 Operational Takeaway:**  
+> GBDT limits catastrophic worst-case damage to a 99% Expected Shortfall ($\text{CVaR}_{99\%}$) of **\$8,117.52**—the lowest across all supervised models. In contrast, Cost-Sensitive Logistic Regression exhibits catastrophic tail exposure of **\$27,284.65**. During shopping holidays or distributed bot attacks, Cost-Sensitive LogReg creates crippling operational debt.
 
 ---
 
-## 6. Model Behavioral Mechanics & Loss Surface Treatments
+## 6. The Fraud Investigator's Workday: Queue Breakdown
 
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        MODEL ARCHITECTURAL COMPARISON SUMMARY                         │
-├──────────────────────────┬───────────────────────┬─────────────────┬───────────────────┤
-│ Model Architecture       │ Decision Boundary     │ Loss Objective  │ Imbalance Handling│
-├──────────────────────────┼───────────────────────┼─────────────────┼───────────────────┤
-│ 1. Baseline LogReg       │ Linear Hyperplane     │ Log-Loss (BCE)  │ None (Symmetric)  │
-│ 2. Cost-Sensitive LogReg │ Linear (Shifted)      │ Weighted BCE    │ 578:1 Weighting   │
-│ 3. Deep MLP (Adam)       │ Smooth Non-Linear     │ Regularized BCE │ Gradient Steps    │
-│ 4. GBDT Classifier       │ Axis-Aligned Stumps   │ Stage-wise Loss │ Greedy Residuals  │
-│ 5. Isolation Forest      │ Random Hyperplanes    │ Path Isolation  │ Unsupervised      │
-│ 6. Soft-Voting Ensemble  │ Blended Probability   │ Mean Posteriors │ Paradigm Blending │
-│ 7. Stacked Meta-Learner  │ Meta-Decision Surface │ Meta Log-Loss   │ OOF Cross-Val     │
-└──────────────────────────┴───────────────────────┴─────────────────┴───────────────────┘
-```
+In extreme class imbalance, precision directly governs human analyst burnout and operational cost. Figure 5 displays what happens to 100 alerts sent to the human investigation queue under each model:
 
-### 1. Baseline Logistic Regression (The Explainable Standard)
-* **Mechanics:** Learns a linear log-odds hyperplane $z = w^T x + b$ via standard binary cross-entropy.
-* **Empirical Profile:** Catches **90.42% recall** with **1,420.6 false positives** and \$5,322.05 net loss.
-* **Banking Role:** Because its feature weights are strictly linear, monotone, and non-interacting, it can generate automated **FCRA Adverse Action reason codes** in sub-millisecond execution. It serves as an audit baseline for regulatory compliance.
+![Figure 5: Investigator Workday](figures_statistical/fig5_investigator_workday_efficiency.png)
 
-### 2. Cost-Sensitive Logistic Regression (The Recall Fallacy)
-* **Mechanics:** Weights minority fraud gradients by the inverse class ratio $w_1 = \frac{N_{\text{neg}}}{N_{\text{pos}}} \approx 578.0$.
-* **Empirical Profile:** Event recall reaches **95.53%** and dollar recall reaches **94.57%** (missing only \$663.85 in fraud). However, this boundary shift produces **8,444.1 false positives** per split (14.85% FPR).
-* **The Operational Trade-off:** At \$2.50 per alert, clearing these false alarms costs **\$21,110.16**, pushing total loss to **\$21,774.01 per split**—more than **\$17,400 worse** than GBDT. It is viable only if alerts are effectively free ($C_{\text{FP}} < \$0.16$).
-
-### 3. Deep Neural Network / MLP (Smooth Manifolds)
-* **Mechanics:** 3-layer fully connected architecture with LeakyReLU activations, analytical backpropagation, and Adam adaptive moment optimization ($m_t, v_t$).
-* **Empirical Profile:** Captures **90.35% recall** with 1,485.8 false positives and \$5,492.63 net loss.
-* **Banking Role:** Deep networks model smooth cross-feature manifolds between transaction physics and PCA components. However, under extreme imbalance, deep networks output uncalibrated, overconfident probabilities near 0 and 1, requiring post-hoc isotonic calibration.
-
-### 4. Gradient Boosted Decision Trees / GBDT (The Overall Champion)
-* **Mechanics:** Sequentially builds 30 shallow regression trees (depth 3) fitting pseudo-residuals $r_{im} = y_i - p_{m-1}(x_i)$ with shrinkage $\eta = 0.1$.
-* **Why GBDT Wins the Financial Benchmark:** Unlike neural networks, decision trees partition feature space via **orthogonal axis-aligned splits**. Extreme values in transaction amounts do not tilt the global decision boundary. Trees isolate compact hyper-rectangles of high fraud density, resulting in **conservative, well-calibrated posterior probabilities**. This suppresses false alarms down to **880.2 alerts** (lowest among supervised models), yielding:
-  * Highest Precision: **9.30%**
-  * Highest F1-Score: **16.76%**
-  * Lowest Net Financial Loss: **\$4,369.26**
-  * Lowest Tail Exposure: **$\text{CVaR}_{99\%} = \$8,117.52$**
-
-### 5. Unsupervised Isolation Forest (The Zero-Label Sentinel)
-* **Mechanics:** Constructs 100 Isolation Trees via random feature splits. Measures path length $h(x)$ to isolate a sample; anomalies isolate near roots ($s(x, n) = 2^{-\mathbb{E}[h(x)]/c(n)}$).
-* **Empirical Profile:** Receives **zero label supervision**. Catches **60.46% recall** with only **688.8 false alarms** (FPR 1.21%).
-* **Banking Role:** It cannot replace supervised gating because it misses \$5,066 in fraud. However, its value lies in being an **uncorrupted, parallel watchdog**: when organized syndicates modify their payment behavior to slip past supervised models, Isolation Forest flags the structural anomaly.
-
-### 6. Multi-Paradigm Soft-Voting Ensemble (The Push Challenge Champion)
-* **Mechanics:** Blends posterior probabilities across distinct model families: $\bar{p}(x) = \frac{1}{3}(p_{\text{LogReg}} + p_{\text{MLP}} + p_{\text{GBDT}})$.
-* **Empirical Profile:** Achieves the **highest discriminative separation across all models (ROC-AUC = 0.9808)** and captures **91.12% recall**.
-* **Banking Role:** By averaging predictions with uncorrelated error structures, soft voting reduces estimator variance. At low verification costs ($C_{\text{FP}} = \$0.50$ via in-app biometric push challenges), it achieves the lowest net loss (**\$2,485.42**).
-
-### 7. Stacked Meta-Learner (Wolpert Generalization)
-* **Mechanics:** Executes 5-fold Out-of-Fold (OOF) cross-validation on the training set to generate an unbiased meta-feature matrix, then trains a second-level Logistic Regression meta-classifier.
-* **Empirical Profile:** Reaches **91.86% recall** and 0.9793 ROC-AUC. However, without post-hoc threshold tuning, it produces 2,421.5 false alarms (\$7,518.19 net loss).
+> [!NOTE]
+> **Figure 5 Operational Takeaway:**  
+> For every 100 card transactions flagged by GBDT, **9 are actual fraudsters**, and 91 are innocent customers (9.30% precision). Under Cost-Sensitive LogReg, **only 1 out of 100 flagged cards is a real criminal**—analysts waste 99% of their shift investigating innocent cardholders. GBDT nearly quadruples triage investigative efficiency relative to baseline linear models.
 
 ---
 
-## 7. Operational Cost Sensitivity & Analytical Breakeven Frontiers
+## 7. Multi-Tier Operational Cost Sensitivity & Breakeven Frontiers
 
 Because false-alarm review costs vary by verification channel, we evaluated net financial loss across five distinct operational regimes:
+
+![Figure 3: Breakeven Frontier Curves](figures_statistical/fig3_breakeven_cost_curves.png)
 
 ### Table 7.1: Multi-Tier Operational Cost Sensitivity Matrix ($N = 1,000$ Runs)
 
@@ -237,14 +179,12 @@ By solving $\text{Loss}_A(C_{\text{FP}}^*) = \text{Loss}_B(C_{\text{FP}}^*)$, we
 $$C_{\text{FP}}^* = \frac{\bar{\text{FN}}_{\$, A} - \bar{\text{FN}}_{\$, B}}{\bar{\text{FP}}_B - \bar{\text{FP}}_A}$$
 
 1. **Soft-Voting vs. GBDT Classifier:**
-   $$C_{\text{FP}}^* = \frac{\$2,168.80 - \$1,590.85}{1,789.14 - 880.19} = \frac{\$577.95}{908.95} = \mathbf{\$0.6358}$$
+   $$C_{\text{FP}}^* = \frac{\$2,168.80 - \$1,590.85}{1,789.14 - 880.19} = \frac{\$577.95}{908.95} = \mathbf{\$0.6358 \ (63.6\text{¢})}$$
    * **Result:** When false alarm verification costs **less than \$0.64**, Soft-Voting minimizes net loss. When verification costs **more than \$0.64**, GBDT is optimal.
 2. **GBDT vs. Baseline LogReg:**
-   $$C_{\text{FP}}^* = \frac{\$2,168.80 - \$1,770.57}{1,420.59 - 880.19} = \frac{\$398.23}{540.40} = \mathbf{\$0.7369}$$
-   * **Result:** GBDT outperforms Baseline Logistic Regression whenever alert triage costs more than 73.7 cents.
+   $$C_{\text{FP}}^* = \frac{\$2,168.80 - \$1,770.57}{1,420.59 - 880.19} = \frac{\$398.23}{540.40} = \mathbf{\$0.7369 \ (73.7\text{¢})}$$
 3. **Cost-Sensitive LogReg vs. Baseline LogReg:**
-   $$C_{\text{FP}}^* = \frac{\$1,770.57 - \$663.85}{8,444.07 - 1,420.59} = \frac{\$1,106.72}{7,023.48} = \mathbf{\$0.1576}$$
-   * **Result:** Cost-Sensitive LogReg is viable only if alerts cost less than 15.8 cents.
+   $$C_{\text{FP}}^* = \frac{\$1,770.57 - \$663.85}{8,444.07 - 1,420.59} = \frac{\$1,106.72}{7,023.48} = \mathbf{\$0.1576 \ (15.8\text{¢})}$$
 
 ---
 
@@ -264,7 +204,7 @@ $$C_{\text{FP}}^* = \frac{\bar{\text{FN}}_{\$, A} - \bar{\text{FN}}_{\$, B}}{\ba
 
 ---
 
-## 9. Two-Tier Production Screening Architecture
+## 9. Two-Tier Production Screening Architecture (< 50ms Pipeline)
 
 In high-throughput authorization networks (VisaNet, Mastercard Banknet), transaction scoring must complete in **under 50 milliseconds**. We propose a two-tier cascade:
 
@@ -314,4 +254,5 @@ TRANSACTION INGESTION (Sub-50ms Pipeline):
 * Granular Statistical Breakdown: [`benchmark_1000_runs_statistical_breakdown.csv`](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/benchmark_1000_runs_statistical_breakdown.csv)
 * Parallel Execution Script: [`run_1000_simulations.py`](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/run_1000_simulations.py)
 * Multiprocessing Worker: [`simulation_worker.py`](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/simulation_worker.py)
-* 20-Page Publication PDF: [`report/Credit_Card_Fraud_Detection_Comprehensive_Guide.pdf`](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/report/Credit_Card_Fraud_Detection_Comprehensive_Guide.pdf)
+* Standalone Visual PDF: [`report/Statistical_Report_1000_Simulations.pdf`](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/report/Statistical_Report_1000_Simulations.pdf)
+* 20-Page Comprehensive Monograph: [`report/Credit_Card_Fraud_Detection_Comprehensive_Guide.pdf`](file:///c:/Users/HP/.gemini/antigravity-ide/scratch/Credit-Card-Fraud-Detection-Model/report/Credit_Card_Fraud_Detection_Comprehensive_Guide.pdf)
