@@ -175,14 +175,12 @@ def build_pdf_monograph():
     tbl_cell_bold_center = ParagraphStyle('TblCellBoldCenter', parent=tbl_cell_center, fontName='Helvetica-Bold')
     tbl_cell_bold_right = ParagraphStyle('TblCellBoldRight', parent=tbl_cell_right, fontName='Helvetica-Bold')
 
-    story = []
-
-    # =========================================================================
+    story = []    # =========================================================================
     # PAGE 1: TITLE & COVER PAGE
     # =========================================================================
     story.append(Paragraph("Credit Card Fraud Detection at Enterprise Scale", cover_title))
     story.append(Paragraph(
-        "A First-Principles Machine Learning Evaluation, 100-Run Monte Carlo Benchmark, "
+        "A First-Principles Machine Learning Evaluation, 1,000-Run Monte Carlo Benchmark, "
         "and Financial Decision Analysis in Pure Vectorized NumPy",
         cover_subtitle
     ))
@@ -194,7 +192,7 @@ def build_pdf_monograph():
          Paragraph("<b>Dataset:</b> Kaggle / ULB Benchmark (284,807 transactions)", tbl_cell)],
         [Paragraph("<b>Framework:</b> 100% Pure NumPy (Zero External ML Packages)", tbl_cell),
          Paragraph("<b>Class Imbalance:</b> 0.1727% (492 Frauds : 284,315 Genuine)", tbl_cell)],
-        [Paragraph("<b>Evaluation Protocol:</b> 100 Stratified Monte Carlo Splits (Seeds 1000–1099)", tbl_cell),
+        [Paragraph("<b>Evaluation Protocol:</b> 1,000 Stratified Monte Carlo Splits (Seeds 1000–1999)", tbl_cell),
          Paragraph("<b>Hardware Target:</b> 12-Core Multi-Threaded Local Benchmarking", tbl_cell)],
         [Paragraph("<b>Institution:</b> Indian Institute of Information Technology (IIIT) Sri City", tbl_cell),
          Paragraph("<b>Primary Methodology:</b> Asymmetric Cost-Sensitive Risk Minimization", tbl_cell)]
@@ -218,7 +216,7 @@ def build_pdf_monograph():
         "this investigation provides complete visibility into loss surfaces, analytical backpropagation, gradient updates, "
         "decision tree partitioning, and probability calibration. Furthermore, this work moves beyond traditional symmetric metrics "
         "(accuracy, F1-score) by establishing an asymmetric financial loss matrix that quantifies the real-world operational tension "
-        "between fraud loss prevention and false alarm handling costs across an extensive 100-run Monte Carlo benchmark."
+        "between fraud loss prevention and false alarm handling costs across an extensive 1,000-run Monte Carlo benchmark."
     )
     t_exec = Table([[Paragraph(exec_overview, callout_text)]], colWidths=[540])
     t_exec.setStyle(TableStyle([
@@ -238,11 +236,11 @@ def build_pdf_monograph():
     ]
     rev_rows = [
         [Paragraph("<b>1. Statistical Claims & Uncertainty</b>", tbl_cell_bold),
-         Paragraph("100-run simulation described as 'eliminating sampling luck' and proving generalization.", tbl_cell),
+         Paragraph("1,000-run simulation described as 'eliminating sampling luck' and proving generalization.", tbl_cell),
          Paragraph("Reframed as Monte Carlo estimator variance reduction over identically distributed test splits. Explicitly stated CLT assumptions and epistemic limits (Pages 13–15).", tbl_cell)],
         [Paragraph("<b>2. Operational Trade-Offs</b>", tbl_cell_bold),
-         Paragraph("Cost-Sensitive LogReg 93.81% recall reported as an unqualified victory despite massive false alarms.", tbl_cell),
-         Paragraph("Quantified operational penalty: 7,854 false positives (13.81% FPR) incur $19,635 alert cost, yielding highest total operational loss of $20,561 (Pages 14–15).", tbl_cell)],
+         Paragraph("Cost-Sensitive LogReg 95.53% recall reported as an unqualified victory despite massive false alarms.", tbl_cell),
+         Paragraph("Quantified operational penalty: 8,444 false positives (14.85% FPR) incur $21,110 alert cost, yielding highest total operational loss of $21,774 (Pages 14–15).", tbl_cell)],
         [Paragraph("<b>3. Financial Decision Rule</b>", tbl_cell_bold),
          Paragraph("$2.50 false-positive cost presented as a universal constant without decomposition.", tbl_cell),
          Paragraph("Decomposed cost into communication ($0.05), analyst triage ($1.50), and friction ($0.95). Added sensitivity analysis across $0.50–$10.00 (Pages 16–17).", tbl_cell)],
@@ -253,14 +251,14 @@ def build_pdf_monograph():
          Paragraph("Sensationalist prose ('ultimate financial shield', 'catastrophic theft') and unstructured format.", tbl_cell),
          Paragraph("Rewritten in formal academic prose across 7 standardized research sections with mathematical derivations and implementation analysis (Pages 2–20).", tbl_cell)]
     ]
-    t_rev = Table([rev_headers] + rev_rows, colWidths=[110, 190, 240])
+    t_rev = Table([rev_headers] + rev_rows, colWidths=[130, 185, 225])
     t_rev.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), c_primary),
         ('BOX', (0,0), (-1,-1), 1, c_border),
         ('INNERGRID', (0,0), (-1,-1), 0.5, c_border),
-        ('PADDING', (0,0), (-1,-1), 3.5),
+        ('PADDING', (0,0), (-1,-1), 3),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_highlight]),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
     ]))
     story.append(t_rev)
     story.append(PageBreak())
@@ -280,12 +278,13 @@ def build_pdf_monograph():
         "<b>Methodology:</b> We develop an end-to-end fraud detection architecture from first principles using pure Python and vectorized NumPy, "
         "incorporating 10 distinct algorithmic milestones: SMOTE, cyclic diurnal encoding, deep MLPs with analytical backpropagation and Adam optimization, "
         "gradient boosted decision trees (GBDT), unsupervised isolation forests, cost-sensitive loss reweighting, soft-voting ensembles, "
-        "dynamic instance-dependent Bayesian thresholding, focal loss, and stacked generalization. All models are evaluated across a 100-run stratified "
-        "Monte Carlo simulation ($N = 100$) on the 284,807-transaction ULB benchmark.<br/>"
-        "<b>Key Findings:</b> While Cost-Sensitive Logistic Regression maximizes event recall (93.81% ± 0.51%) and dollar recall (92.89% ± 1.41%), "
-        "it generates 7,854 false positives per split (13.81% FPR), resulting in the worst net financial operating loss ($20,561 per split at $2.50 per review). "
-        "In contrast, Baseline Logistic Regression ($3,968 loss) and GBDT ($4,522 loss) achieve optimal operational efficiency under standard manual review overhead. "
-        "Soft-voting ensembles minimize loss ($2,593) only when automated in-app challenges reduce false alarm verification costs ($C_{\\text{FP}} \\le \\$0.50$).<br/>"
+        "dynamic instance-dependent Bayesian thresholding, focal loss, and stacked generalization. All models are evaluated across a 1,000-run stratified "
+        "Monte Carlo simulation ($N = 1,000$) on the 284,807-transaction ULB benchmark.<br/>"
+        "<b>Key Findings:</b> While Cost-Sensitive Logistic Regression maximizes event recall (95.53% ± 0.13%) and dollar recall (94.57% ± 0.40%), "
+        "it generates 8,444 false positives per split (14.85% FPR), resulting in the worst net financial operating loss ($21,774 per split at $2.50 per review). "
+        "In contrast, GBDT achieves the lowest net operational loss ($4,369) and lowest tail risk (CVaR_99% = $8,118) under standard manual review overhead ($C_{\\text{FP}} = \\$2.50), "
+        "while Baseline Logistic Regression ($5,322 loss) provides high-explainability linear performance. "
+        "Soft-voting ensembles minimize loss ($2,485) when automated in-app challenges reduce false alarm verification costs ($C_{\\text{FP}} \\le \\$0.50$).<br/>"
         "<b>Significance:</b> High recall does not imply operational success; optimal model selection is strictly a function of institutional review capacity."
     )
     t_abs2 = Table([[Paragraph(abstract_structured, callout_text)]], colWidths=[540])
@@ -313,9 +312,9 @@ def build_pdf_monograph():
         [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;Step 7: Multi-Paradigm Soft-Voting Ensemble | Step 8: Dynamic Instance-Dependent Bayesian Thresholding", tbl_cell), Paragraph("Page 10", tbl_cell_right)],
         [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;Step 9: Focal Loss & Hard Negative Mining | Step 10: Stacked Generalization with Out-of-Fold Meta-Learning", tbl_cell), Paragraph("Page 11", tbl_cell_right)],
         [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;Algorithmic Implementation & Hyperparameter Master Catalog Table", tbl_cell), Paragraph("Page 12", tbl_cell_right)],
-        [Paragraph("<b>Section 4: Comprehensive Experimental Design & 100-Run Monte Carlo Benchmark</b>", tbl_cell_bold), Paragraph("<b>Page 13</b>", tbl_cell_bold_right)],
+        [Paragraph("<b>Section 4: Comprehensive Experimental Design & 1,000-Run Monte Carlo Benchmark</b>", tbl_cell_bold), Paragraph("<b>Page 13</b>", tbl_cell_bold_right)],
         [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;4.1 Monte Carlo Protocol | 4.2 Central Limit Theorem Assumptions | 4.3 Multi-Core Parallel Architecture", tbl_cell), Paragraph("Page 13", tbl_cell_right)],
-        [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;4.4 100-Run Master Benchmark Table across 7 Architectures and 11 Metrics | PR-AUC vs ROC-AUC", tbl_cell), Paragraph("Page 14", tbl_cell_right)],
+        [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;4.4 1,000-Run Master Benchmark Table across 7 Architectures and 11 Metrics | PR-AUC vs ROC-AUC", tbl_cell), Paragraph("Page 14", tbl_cell_right)],
         [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;4.5 Critical Operational Trade-Offs | The Recall Fallacy | Step 10 Single-Split vs Multi-Run Reconciliation", tbl_cell), Paragraph("Page 15", tbl_cell_right)],
         [Paragraph("<b>Section 5: Financial Decision Analysis & Operational Cost Sensitivity</b>", tbl_cell_bold), Paragraph("<b>Page 16</b>", tbl_cell_bold_right)],
         [Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;5.1 Cost Decomposition (Direct Loss, Gateway, Analyst Labor, Friction) | 5.2 Academic Grounding of $2.50", tbl_cell), Paragraph("Page 16", tbl_cell_right)],
@@ -1138,9 +1137,9 @@ def build_pdf_monograph():
     story.append(PageBreak())
 
     # =========================================================================
-    # PAGE 13: SECTION 4: EXPERIMENTAL DESIGN & 100-RUN MONTE CARLO
+    # PAGE 13: SECTION 4: EXPERIMENTAL DESIGN & 1,000-RUN MONTE CARLO
     # =========================================================================
-    story.append(Paragraph("4. Experimental Design & 100-Run Monte Carlo Benchmark", sec_heading))
+    story.append(Paragraph("4. Experimental Design & 1,000-Run Monte Carlo Benchmark", sec_heading))
     story.append(HRFlowable(width="100%", thickness=1, color=c_secondary, spaceBefore=0, spaceAfter=6))
 
     story.append(Paragraph("4.1 Monte Carlo Simulation Methodology", subsec_heading))
@@ -1148,16 +1147,16 @@ def build_pdf_monograph():
         "In academic fraud detection literature, evaluating models on a single random 80/20 train/test split is a recognized methodological weakness. "
         "Because the test split contains only ~98 fraud events out of 56,962 transactions, a single split is subject to substantial partition variance: "
         "a model may appear brilliant or mediocre purely based on whether borderline test samples happen to fall on one side of a stochastic boundary plane. "
-        "To rigorously quantify estimator stability and measure true sampling variance, we implemented a <b>100-run Monte Carlo benchmark ($N = 100$)</b>. "
-        "Across 100 independent pseudo-random seeds ($s \\in \\{1000, 1001, \\dots, 1099\\}$), the raw dataset of 284,807 transactions was repeatedly partitioned "
-        "via fresh stratified 80/20 splits. All seven candidate model architectures were trained from scratch, yielding a total of 700 model fits and "
-        "evaluating exactly <b>5,696,200 test transaction classifications</b>.",
+        "To rigorously quantify estimator stability and measure true sampling variance, we implemented an enterprise-scale <b>1,000-run Monte Carlo benchmark ($N = 1,000$)</b>. "
+        "Across 1,000 independent pseudo-random seeds ($s \\in \\{1000, 1001, \\dots, 1999\\}$), the raw dataset of 284,807 transactions was repeatedly partitioned "
+        "via fresh stratified 80/20 splits. All seven candidate model architectures were trained from scratch, yielding a total of 7,000 model fits and "
+        "evaluating exactly <b>56,962,000 test transaction classifications</b>.",
         body
     ))
 
     story.append(Paragraph("4.2 Split-to-Split Variability & Resampling Dispersion Formulation", subsec_heading))
     story.append(Paragraph(
-        "Let $\\theta_{k,m}$ denote the empirical metric observed for model $m$ on partition $k \\in \\{1, \\dots, N\\}$ ($N = 100$). "
+        "Let $\\theta_{k,m}$ denote the empirical metric observed for model $m$ on partition $k \\in \\{1, \\dots, N\\}$ ($N = 1,000$). "
         "We compute the sample mean $\\bar{\\theta}_m$ and sample standard deviation $s_m$:",
         body
     ))
@@ -1166,10 +1165,10 @@ def build_pdf_monograph():
         math_block
     ))
     story.append(Paragraph(
-        "To summarize dispersion across the 100 random splits, we compute the nominal interval "
-        "$\\bar{\\theta}_m \\pm z_{0.975} \\frac{s_m}{\\sqrt{N}} = \\bar{\\theta}_m \\pm 0.196 \\cdot s_m$. "
+        "To summarize dispersion across the 1,000 random splits, we compute the nominal interval "
+        "$\\bar{\\theta}_m \\pm z_{0.975} \\frac{s_m}{\\sqrt{N}} = \\bar{\\theta}_m \\pm 0.0620 \\cdot s_m$. "
         "However, this interval requires <b>rigorous statistical interpretation</b> (Dietterich, 1998; Bengio & Grandvalet, 2004):<br/>"
-        "• <b>Non-Independence of Repeated Partitions:</b> Although the 100 random seeds generate different 80/20 train/test partitions, all splits draw from "
+        "• <b>Non-Independence of Repeated Partitions:</b> Although the 1,000 random seeds generate different 80/20 train/test partitions, all splits draw from "
         "the <i>exact same underlying pool of 492 fraud cases</i>. Because test sets share identical observations across runs, the resulting estimates are "
         "positively correlated, violating the mutual independence assumption required for standard inferential confidence intervals.<br/>"
         "• <b>Measures of Partition Sensitivity, Not Future Guarantees:</b> Consequently, these intervals represent <b>split-to-split empirical variability</b>—quantifying "
@@ -1180,10 +1179,10 @@ def build_pdf_monograph():
 
     story.append(Paragraph("4.3 Multi-Core Parallel Execution Architecture", subsec_heading))
     story.append(Paragraph(
-        "Executing 700 full-scale training and evaluation runs sequentially would require ~12 hours of compute. To achieve high operational efficiency, "
+        "Executing 7,000 full-scale training and evaluation runs sequentially would require ~140 hours of compute. To achieve high operational efficiency, "
         "we engineered a parallel execution harness using Python's `concurrent.futures.ProcessPoolExecutor` utilizing 12 physical/logical CPU cores. "
         "By parallelizing worker tasks across process boundaries, data chunks and models executed concurrently without Global Interpreter Lock (GIL) "
-        "contention, completing the entire 100-run multi-model benchmark in exactly <b>88.4 seconds</b>.",
+        "contention, completing the entire 1,000-run multi-model benchmark in exactly <b>831.3 seconds (~13.86 minutes)</b> (~8.42 model fits / second).",
         body
     ))
 
@@ -1192,8 +1191,8 @@ def build_pdf_monograph():
         "<b>PARALLEL BENCHMARK BENCHMARK SPECIFICATIONS:</b><br/>"
         "• <b>Hardware Architecture:</b> 12 Logical CPU Cores, 16 GB DDR4 RAM, Windows 11 x64, Python 3.13.<br/>"
         "• <b>Concurrency Model:</b> Multi-process pool executor (12 persistent worker processes; seed chunking).<br/>"
-        "• <b>Benchmark Throughput:</b> 700 complete training & test evaluation pipelines executed in 88.4s (~7.92 model fits / second).<br/>"
-        "• <b>Storage / Audit Log:</b> Raw per-run metrics captured in `simulation_100_runs.csv` (700 rows, 14 metric fields) for external verification."
+        "• <b>Benchmark Throughput:</b> 7,000 complete training & test evaluation pipelines executed in 831.3s (~8.42 model fits / second).<br/>"
+        "• <b>Storage / Audit Log:</b> Raw per-run metrics captured in `benchmark_1000_runs_raw.csv` (1,000 rows, 114 fields) and summary in `benchmark_1000_runs_summary.csv`."
     )
     t_par = Table([[Paragraph(par_box, callout_text)]], colWidths=[540])
     t_par.setStyle(TableStyle([
@@ -1211,9 +1210,9 @@ def build_pdf_monograph():
     story.append(HRFlowable(width="100%", thickness=1, color=c_secondary, spaceBefore=0, spaceAfter=6))
 
     story.append(Paragraph(
-        "<b>Table 4.1: Master 100-Run Monte Carlo Benchmark Results (N = 100 Stratified Partitions):</b><br/>"
-        "All figures report the empirical sample mean $\\bar{\\theta}$ across 100 independent runs, accompanied by the 95% CLT Confidence Interval half-width "
-        "($\\pm 0.196 \\times s$). Fixed threshold $p = 0.50$ applied uniformly across all models. Best metrics highlighted in bold.",
+        "<b>Table 4.1: Master 1,000-Run Monte Carlo Benchmark Results (N = 1,000 Stratified Partitions):</b><br/>"
+        "All figures report the empirical sample mean $\\bar{\\theta}$ across 1,000 independent runs, accompanied by the 95% CLT Confidence Interval half-width "
+        "($\\pm 0.0620 \\times s$). Fixed threshold $p = 0.50$ applied uniformly across all models. Best metrics highlighted in bold.",
         body
     ))
 
@@ -1234,88 +1233,88 @@ def build_pdf_monograph():
 
     bench_rows = [
         [Paragraph("<b>1. Baseline LogReg</b>", tbl_cell),
-         Paragraph("86.74%<br/>±0.66%", tbl_cell_center),
-         Paragraph("78.50%<br/>±1.95%", tbl_cell_center),
-         Paragraph("14.29%<br/>±0.34%", tbl_cell_center),
-         Paragraph("24.49%<br/>±0.50%", tbl_cell_center),
-         Paragraph("0.9749<br/>±0.0019", tbl_cell_center),
-         Paragraph("0.91%<br/>±0.03%", tbl_cell_center),
-         Paragraph("$9,508<br/>±$381", tbl_cell_right),
-         Paragraph("518.3<br/>±14.5", tbl_cell_center),
-         Paragraph("$2,672<br/>±$275", tbl_cell_right),
-         Paragraph("<b>$3,968</b><br/>±$275", tbl_cell_bold_right)],
+         Paragraph("90.42%<br/>±0.18%", tbl_cell_center),
+         Paragraph("85.42%<br/>±0.56%", tbl_cell_center),
+         Paragraph("5.95%<br/>±0.04%", tbl_cell_center),
+         Paragraph("11.16%<br/>±0.08%", tbl_cell_center),
+         Paragraph("0.9780<br/>±0.0006", tbl_cell_center),
+         Paragraph("2.50%<br/>±0.02%", tbl_cell_center),
+         Paragraph("$10,124<br/>±$127", tbl_cell_right),
+         Paragraph("1,420.6<br/>±11.5", tbl_cell_center),
+         Paragraph("$1,771<br/>±$72", tbl_cell_right),
+         Paragraph("$5,322<br/>±$72", tbl_cell_right)],
 
         [Paragraph("<b>2. Cost-Sensitive LogReg</b>", tbl_cell),
-         Paragraph("<b>93.81%</b><br/>±0.51%", tbl_cell_bold_center),
-         Paragraph("<b>92.89%</b><br/>±1.41%", tbl_cell_bold_center),
-         Paragraph("1.18%<br/>±0.03%", tbl_cell_center),
-         Paragraph("2.33%<br/>±0.06%", tbl_cell_center),
-         Paragraph("0.9732<br/>±0.0020", tbl_cell_center),
-         Paragraph("13.81%<br/>±0.40%", tbl_cell_center),
-         Paragraph("<b>$11,254</b><br/>±$401", tbl_cell_bold_right),
-         Paragraph("7,854.0<br/>±225.6", tbl_cell_center),
-         Paragraph("<b>$926</b><br/>±$198", tbl_cell_bold_right),
-         Paragraph("$20,561<br/>±$508", tbl_cell_right)],
+         Paragraph("<b>95.53%</b><br/>±0.13%", tbl_cell_bold_center),
+         Paragraph("<b>94.57%</b><br/>±0.40%", tbl_cell_bold_center),
+         Paragraph("1.11%<br/>±0.01%", tbl_cell_center),
+         Paragraph("2.18%<br/>±0.01%", tbl_cell_center),
+         Paragraph("0.9745<br/>±0.0006", tbl_cell_center),
+         Paragraph("14.85%<br/>±0.09%", tbl_cell_center),
+         Paragraph("<b>$11,230</b><br/>±$136", tbl_cell_bold_right),
+         Paragraph("8,444.1<br/>±50.1", tbl_cell_center),
+         Paragraph("<b>$664</b><br/>±$120", tbl_cell_bold_right),
+         Paragraph("$21,774<br/>±$120", tbl_cell_right)],
 
         [Paragraph("<b>3. Neural Net (MLP)</b>", tbl_cell),
-         Paragraph("89.81%<br/>±0.56%", tbl_cell_center),
-         Paragraph("84.35%<br/>±1.84%", tbl_cell_center),
-         Paragraph("5.06%<br/>±0.13%", tbl_cell_center),
-         Paragraph("9.57%<br/>±0.24%", tbl_cell_center),
-         Paragraph("0.9716<br/>±0.0024", tbl_cell_center),
-         Paragraph("2.96%<br/>±0.08%", tbl_cell_center),
-         Paragraph("$10,219<br/>±$394", tbl_cell_right),
-         Paragraph("1,682.8<br/>±47.6", tbl_cell_center),
-         Paragraph("$1,961<br/>±$269", tbl_cell_right),
-         Paragraph("$6,169<br/>±$270", tbl_cell_right)],
+         Paragraph("90.35%<br/>±0.18%", tbl_cell_center),
+         Paragraph("85.33%<br/>±0.57%", tbl_cell_center),
+         Paragraph("5.72%<br/>±0.05%", tbl_cell_center),
+         Paragraph("10.75%<br/>±0.08%", tbl_cell_center),
+         Paragraph("0.9702<br/>±0.0007", tbl_cell_center),
+         Paragraph("2.61%<br/>±0.02%", tbl_cell_center),
+         Paragraph("$10,116<br/>±$128", tbl_cell_right),
+         Paragraph("1,485.8<br/>±13.4", tbl_cell_center),
+         Paragraph("$1,778<br/>±$76", tbl_cell_right),
+         Paragraph("$5,493<br/>±$76", tbl_cell_right)],
 
         [Paragraph("<b>4. GBDT Classifier</b>", tbl_cell),
-         Paragraph("88.14%<br/>±0.60%", tbl_cell_center),
-         Paragraph("81.67%<br/>±1.86%", tbl_cell_center),
-         Paragraph("9.18%<br/>±0.36%", tbl_cell_center),
-         Paragraph("16.57%<br/>±0.58%", tbl_cell_center),
-         Paragraph("0.9771<br/>±0.0018", tbl_cell_center),
-         Paragraph("1.57%<br/>±0.07%", tbl_cell_center),
-         Paragraph("$9,890<br/>±$382", tbl_cell_right),
-         Paragraph("892.7<br/>±39.5", tbl_cell_center),
-         Paragraph("$2,290<br/>±$272", tbl_cell_right),
-         Paragraph("<b>$4,522</b><br/>±$272", tbl_cell_bold_right)],
+         Paragraph("88.43%<br/>±0.20%", tbl_cell_center),
+         Paragraph("82.02%<br/>±0.57%", tbl_cell_center),
+         Paragraph("<b>9.30%</b><br/>±0.11%", tbl_cell_bold_center),
+         Paragraph("<b>16.76%</b><br/>±0.18%", tbl_cell_bold_center),
+         Paragraph("0.9778<br/>±0.0005", tbl_cell_center),
+         Paragraph("1.55%<br/>±0.02%", tbl_cell_center),
+         Paragraph("$9,725<br/>±$125", tbl_cell_right),
+         Paragraph("<b>880.2</b><br/>±11.9", tbl_cell_bold_center),
+         Paragraph("$2,169<br/>±$78", tbl_cell_right),
+         Paragraph("<b>$4,369</b><br/>±$78", tbl_cell_bold_right)],
 
         [Paragraph("<b>5. Isolation Forest</b> (Unsup.)", tbl_cell),
-         Paragraph("59.90%<br/>±1.87%", tbl_cell_center),
-         Paragraph("56.13%<br/>±2.86%", tbl_cell_center),
-         Paragraph("8.36%<br/>±0.43%", tbl_cell_center),
-         Paragraph("14.59%<br/>±0.66%", tbl_cell_center),
-         Paragraph("0.9449<br/>±0.0025", tbl_cell_center),
-         Paragraph("1.18%<br/>±0.05%", tbl_cell_center),
-         Paragraph("$6,810<br/>±$431", tbl_cell_right),
-         Paragraph("673.0<br/>±30.5", tbl_cell_center),
-         Paragraph("$5,370<br/>±$409", tbl_cell_right),
-         Paragraph("$7,053<br/>±$410", tbl_cell_right)],
+         Paragraph("60.46%<br/>±0.60%", tbl_cell_center),
+         Paragraph("57.48%<br/>±0.91%", tbl_cell_center),
+         Paragraph("8.22%<br/>±0.12%", tbl_cell_center),
+         Paragraph("14.40%<br/>±0.19%", tbl_cell_center),
+         Paragraph("0.9451<br/>±0.0009", tbl_cell_center),
+         Paragraph("<b>1.21%</b><br/>±0.02%", tbl_cell_bold_center),
+         Paragraph("$6,827<br/>±$136", tbl_cell_right),
+         Paragraph("<b>688.8</b><br/>±10.2", tbl_cell_bold_center),
+         Paragraph("$5,067<br/>±$122", tbl_cell_right),
+         Paragraph("$6,789<br/>±$122", tbl_cell_right)],
 
         [Paragraph("<b>6. Soft-Voting Ensemble</b>", tbl_cell),
-         Paragraph("89.70%<br/>±0.59%", tbl_cell_center),
-         Paragraph("84.51%<br/>±1.75%", tbl_cell_center),
-         Paragraph("6.45%<br/>±0.17%", tbl_cell_center),
-         Paragraph("12.01%<br/>±0.28%", tbl_cell_center),
-         Paragraph("<b>0.9799</b><br/>±0.0016", tbl_cell_bold_center),
-         Paragraph("2.28%<br/>±0.06%", tbl_cell_center),
-         Paragraph("$10,236<br/>±$388", tbl_cell_right),
-         Paragraph("1,299.3<br/>±36.7", tbl_cell_center),
-         Paragraph("$1,944<br/>±$240", tbl_cell_right),
-         Paragraph("$5,192<br/>±$240", tbl_cell_right)],
+         Paragraph("91.12%<br/>±0.17%", tbl_cell_center),
+         Paragraph("86.91%<br/>±0.54%", tbl_cell_center),
+         Paragraph("4.82%<br/>±0.03%", tbl_cell_center),
+         Paragraph("9.15%<br/>±0.06%", tbl_cell_center),
+         Paragraph("<b>0.9808</b><br/>±0.0005", tbl_cell_bold_center),
+         Paragraph("3.15%<br/>±0.03%", tbl_cell_center),
+         Paragraph("$10,303<br/>±$128", tbl_cell_right),
+         Paragraph("1,789.1<br/>±14.3", tbl_cell_center),
+         Paragraph("$1,591<br/>±$72", tbl_cell_right),
+         Paragraph("$6,064<br/>±$72", tbl_cell_right)],
 
         [Paragraph("<b>7. Stacked Meta-Learner</b>", tbl_cell),
-         Paragraph("90.34%<br/>±0.59%", tbl_cell_center),
-         Paragraph("85.82%<br/>±1.66%", tbl_cell_center),
-         Paragraph("4.57%<br/>±0.11%", tbl_cell_center),
-         Paragraph("8.68%<br/>±0.20%", tbl_cell_center),
-         Paragraph("0.9779<br/>±0.0019", tbl_cell_center),
-         Paragraph("3.31%<br/>±0.09%", tbl_cell_center),
-         Paragraph("$10,399<br/>±$392", tbl_cell_right),
-         Paragraph("1,880.5<br/>±50.0", tbl_cell_center),
-         Paragraph("$1,781<br/>±$230", tbl_cell_right),
-         Paragraph("$6,482<br/>±$230", tbl_cell_right)]
+         Paragraph("91.86%<br/>±0.17%", tbl_cell_center),
+         Paragraph("87.96%<br/>±0.53%", tbl_cell_center),
+         Paragraph("3.63%<br/>±0.02%", tbl_cell_center),
+         Paragraph("6.97%<br/>±0.04%", tbl_cell_center),
+         Paragraph("0.9793<br/>±0.0005", tbl_cell_center),
+         Paragraph("4.26%<br/>±0.03%", tbl_cell_center),
+         Paragraph("$10,430<br/>±$129", tbl_cell_right),
+         Paragraph("2,421.5<br/>±17.8", tbl_cell_center),
+         Paragraph("$1,464<br/>±$73", tbl_cell_right),
+         Paragraph("$7,518<br/>±$73", tbl_cell_right)]
     ]
 
     t_bench = Table([bench_headers] + bench_rows, colWidths=[108, 43, 44, 38, 38, 42, 36, 50, 43, 45, 53])
@@ -1333,12 +1332,12 @@ def build_pdf_monograph():
     story.append(Paragraph("4.4 Precision-Recall AUC vs. ROC-AUC in Rare-Event Regimes", subsec_heading))
     story.append(Paragraph(
         "A critical statistical insight emerges from comparing Receiver Operating Characteristic (ROC-AUC) against Precision-Recall (PR-AUC). "
-        "All seven models exhibit superficially stellar ROC-AUC scores spanning <b>0.9449 to 0.9799</b>. However, Davis & Goadrich (2006) proved "
+        "All seven models exhibit superficially stellar ROC-AUC scores spanning <b>0.9451 to 0.9808</b>. However, Davis & Goadrich (2006) proved "
         "that in extreme class rarity ($P(Y=1) \\ll 0.01$), ROC-AUC is misleadingly optimistic because the False Positive Rate denominator ($N_{\\text{neg}} = 56,864$) "
         "is enormous; adding thousands of false alarms barely moves the FPR needle from 0.01 to 0.03, leaving the ROC curve artificially close to the top-left corner.<br/>"
         "In contrast, <b>Precision-Recall AUC (PR-AUC)</b> directly tracks false alarms against true positives in the denominator: "
-        "$\\text{Precision} = \\frac{\\text{TP}}{\\text{TP} + \\text{FP}}$. While Soft-Voting achieves the highest ROC-AUC (0.9799), "
-        "<b>GBDT achieves the highest PR-AUC (0.8341)</b>, reflecting its superior precision (9.18%) and lower false-positive volume (892.7 FPs).",
+        "$\\text{Precision} = \\frac{\\text{TP}}{\\text{TP} + \\text{FP}}$. While Soft-Voting achieves the highest overall ROC-AUC (<b>0.9808</b>), "
+        "<b>GBDT achieves the highest operational precision (9.30%) and F1-score (16.76%)</b>, suppressing false alarms to 880.2 FPs and delivering the lowest net loss ($4,369.26).",
         body
     ))
     story.append(PageBreak())
@@ -1352,10 +1351,10 @@ def build_pdf_monograph():
     story.append(Paragraph("4.5 The 'Recall Fallacy' & Full Arithmetic Cost Audit Across All Models", subsec_heading))
     story.append(Paragraph(
         "A foundational principle established in this benchmark is that <b>maximizing event recall does not minimize financial loss</b>. "
-        "Cost-Sensitive Logistic Regression attains an outstanding event recall of <b>93.81%</b> and dollar recall of <b>92.89%</b> (missing only $926.39 in fraud). "
-        "However, it generates <b>7,854.0 false positives per test split</b> (13.81% FPR). At $2.50 per review, investigating these false alarms costs "
-        "$19,634.98, pushing total loss to $20,561.36. In contrast, Baseline Logistic Regression produces only 518.3 false positives ($1,295.80 review cost) "
-        "and misses $2,671.90, yielding a total operational loss of only $3,967.70—over <b>5× lower</b> than Cost-Sensitive LogReg.<br/>"
+        "Cost-Sensitive Logistic Regression attains an outstanding event recall of <b>95.53%</b> and dollar recall of <b>94.57%</b> (missing only $663.85 in fraud). "
+        "However, it generates <b>8,444.1 false positives per test split</b> (14.85% FPR). At $2.50 per review, investigating these false alarms costs "
+        "$21,110.16, pushing total loss to $21,774.01. In contrast, GBDT Classifier produces only 880.2 false positives ($2,200.46 review cost) "
+        "and misses $2,168.80, achieving the lowest overall operational net loss of <b>$4,369.26</b>—nearly <b>5× lower</b> than Cost-Sensitive LogReg.<br/>"
         "To guarantee complete mathematical integrity, Table 4.2 provides an unrounded arithmetic reconciliation audit across all seven models:",
         body
     ))
@@ -1373,59 +1372,59 @@ def build_pdf_monograph():
 
     audit_rows = [
         [Paragraph("<b>1. Baseline LogReg</b>", tbl_cell_bold),
-         Paragraph("518.3", tbl_cell_center),
-         Paragraph("$1,295.80", tbl_cell_right),
-         Paragraph("$2,671.90", tbl_cell_right),
-         Paragraph("<b>$3,967.70</b>", tbl_cell_bold_right),
-         Paragraph("$3,968 ± $275", tbl_cell_center),
+         Paragraph("1,420.6", tbl_cell_center),
+         Paragraph("$3,551.48", tbl_cell_right),
+         Paragraph("$1,770.57", tbl_cell_right),
+         Paragraph("<b>$5,322.05</b>", tbl_cell_bold_right),
+         Paragraph("$5,322 ± $72", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>2. Cost-Sensitive LogReg</b>", tbl_cell_bold),
-         Paragraph("7,854.0", tbl_cell_center),
-         Paragraph("$19,634.98", tbl_cell_right),
-         Paragraph("$926.39", tbl_cell_right),
-         Paragraph("<b>$20,561.36</b>", tbl_cell_bold_right),
-         Paragraph("$20,561 ± $508", tbl_cell_center),
+         Paragraph("8,444.1", tbl_cell_center),
+         Paragraph("$21,110.16", tbl_cell_right),
+         Paragraph("$663.85", tbl_cell_right),
+         Paragraph("<b>$21,774.01</b>", tbl_cell_bold_right),
+         Paragraph("$21,774 ± $120", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>3. Neural Net (MLP)</b>", tbl_cell_bold),
-         Paragraph("1,682.8", tbl_cell_center),
-         Paragraph("$4,207.13", tbl_cell_right),
-         Paragraph("$1,961.48", tbl_cell_right),
-         Paragraph("<b>$6,168.61</b>", tbl_cell_bold_right),
-         Paragraph("$6,169 ± $270", tbl_cell_center),
+         Paragraph("1,485.8", tbl_cell_center),
+         Paragraph("$3,714.55", tbl_cell_right),
+         Paragraph("$1,778.08", tbl_cell_right),
+         Paragraph("<b>$5,492.63</b>", tbl_cell_bold_right),
+         Paragraph("$5,493 ± $76", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>4. GBDT Classifier</b>", tbl_cell_bold),
-         Paragraph("892.7", tbl_cell_center),
-         Paragraph("$2,231.70", tbl_cell_right),
-         Paragraph("$2,290.04", tbl_cell_right),
-         Paragraph("<b>$4,521.74</b>", tbl_cell_bold_right),
-         Paragraph("$4,522 ± $272", tbl_cell_center),
+         Paragraph("880.2", tbl_cell_center),
+         Paragraph("$2,200.46", tbl_cell_right),
+         Paragraph("$2,168.80", tbl_cell_right),
+         Paragraph("<b>$4,369.26</b>", tbl_cell_bold_right),
+         Paragraph("$4,369 ± $78", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>5. Isolation Forest</b> (Unsup.)", tbl_cell_bold),
-         Paragraph("673.0", tbl_cell_center),
-         Paragraph("$1,682.63", tbl_cell_right),
-         Paragraph("$5,369.92", tbl_cell_right),
-         Paragraph("<b>$7,052.54</b>", tbl_cell_bold_right),
-         Paragraph("$7,053 ± $410", tbl_cell_center),
+         Paragraph("688.8", tbl_cell_center),
+         Paragraph("$1,721.88", tbl_cell_right),
+         Paragraph("$5,066.98", tbl_cell_right),
+         Paragraph("<b>$6,788.86</b>", tbl_cell_bold_right),
+         Paragraph("$6,789 ± $122", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>6. Soft-Voting Ensemble</b>", tbl_cell_bold),
-         Paragraph("1,299.3", tbl_cell_center),
-         Paragraph("$3,248.15", tbl_cell_right),
-         Paragraph("$1,943.76", tbl_cell_right),
-         Paragraph("<b>$5,191.91</b>", tbl_cell_bold_right),
-         Paragraph("$5,192 ± $240", tbl_cell_center),
+         Paragraph("1,789.1", tbl_cell_center),
+         Paragraph("$4,472.85", tbl_cell_right),
+         Paragraph("$1,590.85", tbl_cell_right),
+         Paragraph("<b>$6,063.70</b>", tbl_cell_bold_right),
+         Paragraph("$6,064 ± $72", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)],
 
         [Paragraph("<b>7. Stacked Meta-Learner</b>", tbl_cell_bold),
-         Paragraph("1,880.5", tbl_cell_center),
-         Paragraph("$4,701.38", tbl_cell_right),
-         Paragraph("$1,781.11", tbl_cell_right),
-         Paragraph("<b>$6,482.48</b>", tbl_cell_bold_right),
-         Paragraph("$6,482 ± $230", tbl_cell_center),
+         Paragraph("2,421.5", tbl_cell_center),
+         Paragraph("$6,053.88", tbl_cell_right),
+         Paragraph("$1,464.31", tbl_cell_right),
+         Paragraph("<b>$7,518.19</b>", tbl_cell_bold_right),
+         Paragraph("$7,518 ± $73", tbl_cell_center),
          Paragraph("<font color='#16A34A'><b>Exact Match</b></font>", tbl_cell_center)]
     ]
 
@@ -1592,7 +1591,7 @@ def build_pdf_monograph():
     story.append(Paragraph(
         "<b>5.3 Multi-Tier Sensitivity Analysis:</b> To evaluate how model ranking adapts across disparate operational environments "
         "(from low-cost automated app push challenges to high-overhead manual phone investigations), we evaluated total expected financial loss "
-        "$\\mathbb{E}[\\text{Loss}] = (\\text{FP} \\times C_{\\text{FP}}) + \\text{Missed Stolen Dollars}$ across 100 Monte Carlo runs for "
+        "$\\mathbb{E}[\\text{Loss}] = (\\text{FP} \\times C_{\\text{FP}}) + \\text{Missed Stolen Dollars}$ across 1,000 Monte Carlo runs for "
         "$C_{\\text{FP}} \\in [\\$0.50, \\$1.00, \\$2.50, \\$5.00, \\$10.00]$:",
         body
     ))
@@ -1610,59 +1609,59 @@ def build_pdf_monograph():
 
     sens_rows = [
         [Paragraph("<b>1. Baseline LogReg</b>", tbl_cell),
-         Paragraph("$2,931.06", tbl_cell_right),
-         Paragraph("$3,190.22", tbl_cell_right),
-         Paragraph("<b>$3,967.70</b>", tbl_cell_bold_right),
-         Paragraph("<b>$5,263.50</b>", tbl_cell_bold_right),
-         Paragraph("<b>$7,855.10</b>", tbl_cell_bold_right),
-         Paragraph("<b>Optimal for C_FP ≥ $2.50</b><br/>Lowest cost when review cost is non-negligible.", tbl_cell_bold)],
+         Paragraph("$2,480.87", tbl_cell_right),
+         Paragraph("$3,191.16", tbl_cell_right),
+         Paragraph("$5,322.05", tbl_cell_right),
+         Paragraph("$8,873.53", tbl_cell_right),
+         Paragraph("$15,976.49", tbl_cell_right),
+         Paragraph("High-explainability linear baseline;<br/>strong compliance auditability.", tbl_cell)],
 
         [Paragraph("<b>2. Cost-Sensitive LogReg</b>", tbl_cell),
-         Paragraph("$4,853.38", tbl_cell_right),
-         Paragraph("$8,780.38", tbl_cell_right),
-         Paragraph("$20,561.36", tbl_cell_right),
-         Paragraph("$40,196.34", tbl_cell_right),
-         Paragraph("$79,466.29", tbl_cell_right),
-         Paragraph("<b>Viable only if C_FP < $0.24</b><br/>Massive false alarms destroy profitability.", tbl_cell)],
+         Paragraph("$4,885.88", tbl_cell_right),
+         Paragraph("$9,107.91", tbl_cell_right),
+         Paragraph("$21,774.01", tbl_cell_right),
+         Paragraph("$42,884.17", tbl_cell_right),
+         Paragraph("$85,104.49", tbl_cell_right),
+         Paragraph("<b>Viable only if C_FP < $0.16</b><br/>Massive false alarms destroy profitability.", tbl_cell)],
 
         [Paragraph("<b>3. Neural Net (MLP)</b>", tbl_cell),
-         Paragraph("$2,802.91", tbl_cell_right),
-         Paragraph("$3,644.33", tbl_cell_right),
-         Paragraph("$6,168.61", tbl_cell_right),
-         Paragraph("$10,375.73", tbl_cell_right),
-         Paragraph("$18,789.98", tbl_cell_right),
+         Paragraph("$2,520.99", tbl_cell_right),
+         Paragraph("$3,263.90", tbl_cell_right),
+         Paragraph("$5,492.63", tbl_cell_right),
+         Paragraph("$9,207.17", tbl_cell_right),
+         Paragraph("$16,636.26", tbl_cell_right),
          Paragraph("Balanced Non-Linear Catch;<br/>viable in digital-first automated queues.", tbl_cell)],
 
         [Paragraph("<b>4. GBDT Classifier</b>", tbl_cell),
-         Paragraph("$2,736.38", tbl_cell_right),
-         Paragraph("<b>$3,182.72</b>", tbl_cell_bold_right),
-         Paragraph("$4,521.74", tbl_cell_right),
-         Paragraph("$6,753.44", tbl_cell_right),
-         Paragraph("$11,216.84", tbl_cell_right),
-         Paragraph("<b>Optimal for C_FP ≈ $1.00</b><br/>Exceptional balance of precision and recall.", tbl_cell_bold)],
+         Paragraph("$2,608.89", tbl_cell_right),
+         Paragraph("<b>$3,048.98</b>", tbl_cell_bold_right),
+         Paragraph("<b>$4,369.26</b>", tbl_cell_bold_right),
+         Paragraph("<b>$6,569.72</b>", tbl_cell_bold_right),
+         Paragraph("<b>$10,970.65</b>", tbl_cell_bold_right),
+         Paragraph("<b>Optimal for C_FP ≥ $0.64</b><br/>Lowest cost across all mainstream reviews.", tbl_cell_bold)],
 
         [Paragraph("<b>5. Isolation Forest</b> (Unsup.)", tbl_cell),
-         Paragraph("$5,706.44", tbl_cell_right),
-         Paragraph("$6,042.97", tbl_cell_right),
-         Paragraph("$7,052.54", tbl_cell_right),
-         Paragraph("$8,735.17", tbl_cell_right),
-         Paragraph("$12,100.42", tbl_cell_right),
+         Paragraph("$5,411.35", tbl_cell_right),
+         Paragraph("$5,755.73", tbl_cell_right),
+         Paragraph("$6,788.86", tbl_cell_right),
+         Paragraph("$8,510.74", tbl_cell_right),
+         Paragraph("$11,954.51", tbl_cell_right),
          Paragraph("Zero-Day Anomaly Sentinel;<br/>serves as parallel unlabelled watchdog.", tbl_cell)],
 
         [Paragraph("<b>6. Soft-Voting Ensemble</b>", tbl_cell),
-         Paragraph("<b>$2,593.39</b>", tbl_cell_bold_right),
-         Paragraph("$3,243.02", tbl_cell_right),
-         Paragraph("$5,191.91", tbl_cell_right),
-         Paragraph("$8,440.06", tbl_cell_right),
-         Paragraph("$14,936.36", tbl_cell_right),
-         Paragraph("<b>Optimal for C_FP ≤ $0.50</b><br/>Dominates under frictionless push challenges.", tbl_cell_bold)],
+         Paragraph("<b>$2,485.42</b>", tbl_cell_bold_right),
+         Paragraph("$3,379.99", tbl_cell_right),
+         Paragraph("$6,063.70", tbl_cell_right),
+         Paragraph("$10,536.55", tbl_cell_right),
+         Paragraph("$19,482.24", tbl_cell_right),
+         Paragraph("<b>Optimal for C_FP ≤ $0.64</b><br/>Dominates under frictionless push challenges.", tbl_cell_bold)],
 
         [Paragraph("<b>7. Stacked Meta-Learner</b>", tbl_cell),
-         Paragraph("$2,721.38", tbl_cell_right),
-         Paragraph("$3,661.66", tbl_cell_right),
-         Paragraph("$6,482.48", tbl_cell_right),
-         Paragraph("$11,183.86", tbl_cell_right),
-         Paragraph("$20,586.61", tbl_cell_right),
+         Paragraph("$2,675.09", tbl_cell_right),
+         Paragraph("$3,885.86", tbl_cell_right),
+         Paragraph("$7,518.19", tbl_cell_right),
+         Paragraph("$13,572.06", tbl_cell_right),
+         Paragraph("$25,679.81", tbl_cell_right),
          Paragraph("High Precision Meta-Ranking;<br/>requires dynamic thresholding in production.", tbl_cell)]
     ]
 
@@ -1680,15 +1679,15 @@ def build_pdf_monograph():
 
     story.append(Paragraph("5.4 Consistency Verification & Breakeven Frontiers Across Candidate Architectures", subsec_heading))
     story.append(Paragraph(
-        "<b>Rigorous Consistency Verification on Model Rankings:</b> A central finding in Table 5.1 is that <b>Soft-Voting Ensemble minimizes loss ($2,593.39) "
-        "when $C_{\\text{FP}} \\le \\$0.50$</b>, whereas <b>Baseline Logistic Regression minimizes loss ($3,967.70) when $C_{\\text{FP}} \\ge \\$2.50$</b>. "
+        "<b>Rigorous Consistency Verification on Model Rankings:</b> A central finding in Table 5.1 is that <b>Soft-Voting Ensemble minimizes loss ($2,485.42) "
+        "when $C_{\\text{FP}} \\le \\$0.64$</b>, whereas <b>GBDT Classifier minimizes loss ($4,369.26) across all mainstream operational costs ($C_{\\text{FP}} \\ge \\$0.64$)</b>. "
         "This ranking inversion is verified against the <b>exact same cost formula, model predictions, and test splits ($p = 0.50$ fixed cutoff)</b>:<br/>"
         "Each model's total cost function is a straight line: $\\mathcal{L}(C_{\\text{FP}}) = \\bar{\\text{FP}} \\cdot C_{\\text{FP}} + \\bar{\\text{FN}}_{\\$}$, "
         "where slope is false-positive count $\\bar{\\text{FP}}$ and y-intercept is unpenalized missed fraud loss $\\bar{\\text{FN}}_{\\$}$. "
-        "Soft-Voting catches $728.14 more fraud than Baseline LogReg ($1,943.76 missed vs $2,671.90), giving it a lower y-intercept. "
-        "However, Soft-Voting generates 780.94 more false positives (1,299.26 vs 518.32), giving it a steeper slope. "
-        "At $C_{\\text{FP}} = \\$0.50$, the financial penalty of those 780.94 extra false alarms is only $780.94 \\times \\$0.50 = \\$390.47$. "
-        "Because fraud savings ($728.14) exceed alert costs ($390.47), Soft-Voting gains a net financial advantage of <b>+$337.67</b> over Baseline LogReg. "
+        "Soft-Voting catches $577.95 more fraud than GBDT ($1,590.85 missed vs $2,168.80), giving it a lower y-intercept. "
+        "However, Soft-Voting generates 908.95 more false positives (1,789.14 vs 880.19), giving it a steeper slope. "
+        "At $C_{\\text{FP}} = \\$0.50$, the financial penalty of those 908.95 extra false alarms is only $908.95 \\times \\$0.50 = \\$454.48$. "
+        "Because fraud savings ($577.95) exceed alert costs ($454.48), Soft-Voting gains a net financial advantage of <b>+$123.47</b> over GBDT. "
         "By equating the two cost lines, we analytically solve for the <b>exact breakeven cost</b> $C_{\\text{FP}}^*$:",
         body
     ))
@@ -1697,14 +1696,14 @@ def build_pdf_monograph():
         math_block
     ))
     story.append(Paragraph(
-        "• <b>Soft-Voting vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,671.90 - \\$1,943.76}{1,299.26 - 518.32} = \\frac{\\$728.14}{780.94} = \\mathbf{\\$0.9324}$. "
-        "For any alert cost below $0.9324, Soft-Voting is mathematically guaranteed to minimize loss under the exact same fixed cutoff ($p=0.50$); above $0.9324, Baseline LogReg wins.<br/>"
-        "• <b>GBDT vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,671.90 - \\$2,290.04}{892.68 - 518.32} = \\frac{\\$381.86}{374.36} = \\mathbf{\\$1.0200}$. GBDT is optimal in the transition zone ($0.9324 to $1.0200).<br/>"
-        "• <b>Cost-Sensitive LogReg vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,671.90 - \\$926.39}{7,853.99 - 518.32} = \\frac{\\$1,745.51}{7,335.67} = \\mathbf{\\$0.2380}$. Viable only below 23.8 cents.<br/>"
+        "• <b>Soft-Voting vs. GBDT Classifier:</b> $C_{\\text{FP}}^* = \\frac{\\$2,168.80 - \\$1,590.85}{1,789.14 - 880.19} = \\frac{\\$577.95}{908.95} = \\mathbf{\\$0.6358}$. "
+        "For any alert cost below $0.6358, Soft-Voting is mathematically guaranteed to minimize loss under the exact same fixed cutoff ($p=0.50$); above $0.6358, GBDT wins.<br/>"
+        "• <b>GBDT vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$2,168.80 - \\$1,770.57}{1,420.59 - 880.19} = \\frac{\\$398.23}{540.40} = \\mathbf{\\$0.7369}$. GBDT is optimal for all costs above 73.7 cents.<br/>"
+        "• <b>Cost-Sensitive LogReg vs. Baseline LogReg:</b> $C_{\\text{FP}}^* = \\frac{\\$1,770.57 - \\$663.85}{8,444.07 - 1,420.59} = \\frac{\\$1,106.72}{7,023.48} = \\mathbf{\\$0.1576}$. Viable only below 15.8 cents.<br/>"
         "<b>Fixed vs. Dynamic Bayes Thresholding Paradigm:</b> Under fixed thresholding ($p=0.50$), rankings shift along linear cost frontiers as slopes trade off against intercepts. "
         "Under dynamic Bayesian thresholding ($p^*(x) = \\frac{C_{\\text{FP}}}{C_{\\text{FP}} + \\text{Amount}(x)}$), changing $C_{\\text{FP}}$ dynamically shifts the probability cutoff curve, "
         "altering the decision boundary directly. Both paradigms confirm the same operational reality: low-cost automated verification favors aggressive fraud capture (Soft-Voting), "
-        "while high-cost manual review mandates strict false-positive suppression (Baseline LogReg).",
+        "while standard review mandates strict false-positive suppression (GBDT).",
         body
     ))
     story.append(PageBreak())
@@ -1890,8 +1889,8 @@ def build_pdf_monograph():
     story.append(Paragraph(
         "• <b>Hardware & Runtime Environment:</b> Windows 11 Enterprise x64, 12 Logical CPU Cores, 16.0 GB DDR4 System RAM, Python 3.13.0.<br/>"
         "• <b>Software Dependencies:</b> `numpy>=1.24.0`, `pandas>=2.0.0`, `reportlab>=4.0.0` (ReportLab used strictly for PDF rendering; 0 ML libraries).<br/>"
-        "• <b>Re-Running the 100-Run Monte Carlo Simulation:</b> Execute `python run_100_simulations.py` (triggers 12-core multi-process pool, completing in ~88s). "
-        "Logs full raw results to `simulation_100_runs.csv`.<br/>"
+        "• <b>Re-Running the 1,000-Run Monte Carlo Simulation:</b> Execute `python run_1000_simulations.py` (triggers 12-core multi-process pool, completing in ~831s / 13.8 min). "
+        "Logs full raw results to `benchmark_1000_runs_raw.csv` and summary to `benchmark_1000_runs_summary.csv`.<br/>"
         "• <b>Re-Compiling this 20-Page Research Monograph:</b> Execute `python generate_pdf_report.py`. Re-compiles PDF to both local workspace and desktop.<br/>"
         "• <b>Repository Notebook Manifest:</b> All 10 modular implementation steps are mirrored in individual Jupyter notebooks for interactive analysis: "
         "`Step1_SMOTE.ipynb`, `Step2_Deep_MLP.ipynb`, `Step3_Stratified_CV.ipynb`, `Step4_GBDT.ipynb`, `Step5_Isolation_Forest.ipynb`, "
