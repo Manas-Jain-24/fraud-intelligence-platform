@@ -30,8 +30,19 @@ def main():
     print("Full Statistical Significance, Empirical Density Estimation & Value-at-Risk across N = 1,000 Runs")
     print("=" * 90)
     
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.abspath(os.path.join(script_dir, ".."))
+
+    # Resolve dataset path
+    data_paths = [
+        os.path.join(repo_root, "data", "creditcard.csv"),
+        os.path.join("data", "creditcard.csv"),
+        os.path.join("..", "data", "creditcard.csv")
+    ]
+    data_path = next((p for p in data_paths if os.path.exists(p)), "data/creditcard.csv")
+
     t0_load = time.time()
-    df = pd.read_csv("data/creditcard.csv")
+    df = pd.read_csv(data_path)
     print(f"Dataset Loaded in {time.time() - t0_load:.2f}s: {len(df):,} transactions, {df['Class'].sum():,} frauds.\n")
     
     seconds_in_day = 86400.0
@@ -69,9 +80,11 @@ def main():
     total_time = time.time() - t0_runs
     print(f"\nAll {N_RUNS:,} Monte Carlo Simulations Completed in {total_time:.2f}s ({total_time/60.0:.2f} minutes; {total_time/N_RUNS:.3f}s/run average)!\n")
     
+    out_dir = script_dir if os.path.basename(os.getcwd()) != 'simulations' else '.'
+    raw_path = os.path.join(out_dir, "benchmark_1000_runs_raw.csv")
     df_raw = pd.DataFrame(all_results)
-    df_raw.to_csv("benchmark_1000_runs_raw.csv", index=False)
-    print("Raw run-by-run data saved to: benchmark_1000_runs_raw.csv")
+    df_raw.to_csv(raw_path, index=False)
+    print(f"Raw run-by-run data saved to: {raw_path}")
     
     # Statistical Aggregation per Model
     models = [
@@ -165,13 +178,15 @@ def main():
             
         summary_rows.append(m_row)
         
+    summary_path = os.path.join(out_dir, "benchmark_1000_runs_summary.csv")
     df_summary = pd.DataFrame(summary_rows)
-    df_summary.to_csv("benchmark_1000_runs_summary.csv", index=False)
-    print("Summary benchmarks saved to: benchmark_1000_runs_summary.csv")
+    df_summary.to_csv(summary_path, index=False)
+    print(f"Summary benchmarks saved to: {summary_path}")
     
+    breakdown_path = os.path.join(out_dir, "benchmark_1000_runs_statistical_breakdown.csv")
     df_detailed = pd.DataFrame(detailed_stat_rows)
-    df_detailed.to_csv("benchmark_1000_runs_statistical_breakdown.csv", index=False)
-    print("Detailed statistical breakdown saved to: benchmark_1000_runs_statistical_breakdown.csv")
+    df_detailed.to_csv(breakdown_path, index=False)
+    print(f"Detailed statistical breakdown saved to: {breakdown_path}")
     
     print("\n" + "=" * 115)
     print("1,000-RUN STATISTICAL BENCHMARK SUMMARY (MEAN ± 95% NOMINAL MARGIN, MEDIAN, AND TAIL LOSS)")

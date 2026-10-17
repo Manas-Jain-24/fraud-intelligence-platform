@@ -141,9 +141,14 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 def build_pdf_statistical_report():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
+
     out_dir_local = r"c:\Users\HP\.gemini\antigravity-ide\scratch\Credit-Card-Fraud-Detection-Model\report"
     out_dir_desktop = r"C:\Users\HP\Desktop\PDS\report"
-    fig_dir = r"report\figures_statistical"
+    fig_dir = os.path.join(repo_root, "report", "figures_statistical")
+    if not os.path.exists(fig_dir):
+        fig_dir = os.path.join(script_dir, "..", "figures_statistical")
     os.makedirs(out_dir_local, exist_ok=True)
     os.makedirs(out_dir_desktop, exist_ok=True)
 

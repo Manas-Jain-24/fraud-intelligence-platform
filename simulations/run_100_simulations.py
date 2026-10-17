@@ -12,8 +12,19 @@ def main():
     print("Eliminating the Luck Factor: Rigorous Statistical Significance across N = 100 Runs")
     print("=" * 85)
     
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.abspath(os.path.join(script_dir, ".."))
+
+    # Resolve dataset path
+    data_paths = [
+        os.path.join(repo_root, "data", "creditcard.csv"),
+        os.path.join("data", "creditcard.csv"),
+        os.path.join("..", "data", "creditcard.csv")
+    ]
+    data_path = next((p for p in data_paths if os.path.exists(p)), "data/creditcard.csv")
+
     t0_load = time.time()
-    df = pd.read_csv("data/creditcard.csv")
+    df = pd.read_csv(data_path)
     print(f"Dataset Loaded in {time.time() - t0_load:.2f}s: {len(df):,} transactions, {df['Class'].sum():,} frauds.\n")
     
     seconds_in_day = 86400.0
@@ -47,9 +58,11 @@ def main():
     total_time = time.time() - t0_runs
     print(f"\nAll {N_RUNS} Monte Carlo Simulations Completed in {total_time:.2f}s ({total_time/N_RUNS:.2f}s/run average)!\n")
     
+    out_dir = script_dir if os.path.basename(os.getcwd()) != 'simulations' else '.'
+    raw_path = os.path.join(out_dir, "benchmark_100_runs_raw.csv")
     df_raw = pd.DataFrame(all_results)
-    df_raw.to_csv("benchmark_100_runs_raw.csv", index=False)
-    print("Raw run-by-run data saved to: benchmark_100_runs_raw.csv")
+    df_raw.to_csv(raw_path, index=False)
+    print(f"Raw run-by-run data saved to: {raw_path}")
     
     # Statistical Aggregation per Model
     models = [
@@ -117,11 +130,15 @@ def main():
             
         summary_rows.append(m_row)
         
+    summary_path = os.path.join(out_dir, "benchmark_100_runs_summary.csv")
     df_summary = pd.DataFrame(summary_rows)
-    df_summary.to_csv("benchmark_100_runs_summary.csv", index=False)
-    
+    df_summary.to_csv(summary_path, index=False)
+    print(f"Summary benchmarks saved to: {summary_path}")
+
+    breakdown_path = os.path.join(out_dir, "benchmark_100_runs_statistical_breakdown.csv")
     df_detailed = pd.DataFrame(detailed_stat_rows)
-    df_detailed.to_csv("benchmark_100_runs_statistical_breakdown.csv", index=False)
+    df_detailed.to_csv(breakdown_path, index=False)
+    print(f"Detailed statistical breakdown saved to: {breakdown_path}")
     
     print("=" * 110)
     print("100-RUN STATISTICAL SIGNIFICANCE SUMMARY (MEAN ± 95% CONFIDENCE INTERVAL)")

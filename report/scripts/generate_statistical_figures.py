@@ -12,10 +12,21 @@ plt.rcParams['grid.color'] = '#E2E8F0'
 plt.rcParams['grid.linestyle'] = '--'
 plt.rcParams['grid.alpha'] = 0.7
 
-OUT_DIR = r"report\figures_statistical"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
+
+# Resolve output figures directory
+OUT_DIR = os.path.join(repo_root, "report", "figures_statistical")
 os.makedirs(OUT_DIR, exist_ok=True)
 
-raw_csv = r"benchmark_1000_runs_raw.csv"
+# Resolve raw CSV path (check simulations subfolder first)
+possible_csvs = [
+    os.path.join(repo_root, "simulations", "benchmark_1000_runs_raw.csv"),
+    os.path.join(script_dir, "..", "..", "simulations", "benchmark_1000_runs_raw.csv"),
+    os.path.join("simulations", "benchmark_1000_runs_raw.csv"),
+    "benchmark_1000_runs_raw.csv"
+]
+raw_csv = next((p for p in possible_csvs if os.path.exists(p)), possible_csvs[0])
 df_raw = pd.read_csv(raw_csv)
 
 models = [
