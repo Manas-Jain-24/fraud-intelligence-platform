@@ -910,6 +910,19 @@ with tab_bench:
         > pure NumPy algorithms achieve **>0.96 ROC-AUC** in under **150 microseconds**.
         """)
 
+        st.markdown("---")
+        st.markdown("#### 🎲 50-Run Monte Carlo Statistical Invariance & Tail Risk Benchmark")
+        st.caption("Multi-run resampling across N = 50 independent stratified splits modeling Expected Operational Loss, VaR (95%), and CVaR (99%).")
+
+        sim_sum_file = os.path.join(os.path.dirname(__file__), "simulations", "paysim_simulation_summary.csv")
+        if os.path.exists(sim_sum_file):
+            s_df = pd.read_csv(sim_sum_file)
+            st.dataframe(s_df, use_container_width=True)
+
+        sim_dist_file = os.path.join(os.path.dirname(__file__), "simulations", "paysim_simulation_distribution.png")
+        if os.path.exists(sim_dist_file):
+            st.image(sim_dist_file, use_container_width=True)
+
 
 # ==============================================================================
 # TAB 5: KAGGLE HISTORICAL CASE AUDIT

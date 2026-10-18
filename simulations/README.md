@@ -17,11 +17,15 @@ In imbalanced datasets (e.g., credit card fraud where positive events account fo
 
 | File | Type | Description |
 | :--- | :--- | :--- |
-| `run_1000_simulations.py` | Python Script | Primary production runner executing $N = 1,000$ parallel simulations using `ProcessPoolExecutor` across 12 CPU cores. |
-| `run_100_simulations.py` | Python Script | Rapid test runner executing $N = 100$ parallel iterations (~1 minute). |
-| `simulation_worker.py` | Python Module | Isolated worker unit executing stratified subsampling, 7-model training, inference, and metric logging per iteration. |
-| `benchmark_12_runs.py` | Python Script | Preliminary 12-run prototype script used for initial timing and parallelization benchmarking. |
-| `test_multi_runs.py` | Python Script | Smoke-test verification script for multi-run pipelines. |
+| `run_1000_simulations.py` | Python Script | Primary European Credit Card production runner executing $N = 1,000$ parallel simulations. |
+| `run_100_simulations.py` | Python Script | Rapid European Credit Card runner executing $N = 100$ parallel iterations. |
+| `simulation_worker.py` | Python Module | Isolated worker unit executing Credit Card stratified subsampling, 7-model training, and logging. |
+| `run_paysim_simulation.py` | Python Script | PaySim Mobile Money multi-run Monte Carlo runner executing $N = 50$ parallel iterations. |
+| `paysim_simulation_worker.py` | Python Module | Isolated worker unit executing PaySim balance-drain feature normalization, model training, and financial loss evaluation. |
+| `paysim_simulation_raw.csv` | Dataset | Complete run-by-run dataset capturing Recall, Dollar Recall, Precision, F1, ROC-AUC, Dollars Protected, and Net Loss. |
+| `paysim_simulation_summary.csv` | Dataset | Statistical summary table with Mean ± 95% CI across all 6 models. |
+| `paysim_simulation_breakdown.csv` | Dataset | Comprehensive distribution metrics including VaR (95%) and CVaR (99%) expected shortfalls. |
+| `paysim_simulation_distribution.png` | Visualization | Boxplot distribution of Net Financial Losses and ROC-AUC stability across all 50 iterations. |
 | `benchmark_1000_runs_raw.csv` | Dataset (892 KB) | Complete iteration-by-iteration dataset: 1,000 rows capturing every metric across all 7 models. |
 | `benchmark_1000_runs_summary.csv` | Dataset (18 KB) | High-level summary capturing Mean, StdDev, 95% CI Margin, Median, and Tail-Risk metrics per model. |
 | `benchmark_1000_runs_statistical_breakdown.csv` | Dataset (18 KB) | Comprehensive statistical distribution metrics: Mean, Std, CI, Median, IQR, P1, P5, P95, P99, Min, Max, Skewness, and Excess Kurtosis. |
