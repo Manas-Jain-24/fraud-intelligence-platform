@@ -97,6 +97,9 @@ Located in dedicated folder: `benchmark_industry_vs_scratch/`
 
 ```bash
 C:\Users\HP\Desktop\PDS\
+├── app.py                                         # Next-Gen Live Fraud Intelligence Dashboard (Streamlit)
+├── models_engine.py                               # Unified From-Scratch NumPy & Industry ML Engine (XAI & Inference)
+├── data_generator.py                              # Real-time streaming transaction generator with PCA fidelity
 ├── README.md                                      # Primary project overview & quickstart (Academic focus)
 ├── README_FULL.md                                 # Master capstone documentation & full portfolio analysis
 ├── requirements.txt                               # Lightweight academic dependencies (numpy, pandas, matplotlib)
@@ -107,6 +110,8 @@ C:\Users\HP\Desktop\PDS\
 │
 ├── data/
 │   ├── creditcard.csv                             # Benchmark Kaggle dataset (284,807 rows, 143.8 MB)
+│   ├── model_weights.npz                          # Pre-trained weights for all 6 Scratch algorithms & scalers
+│   ├── sample_cases.json                          # 20 verified Kaggle test cases for interactive audit
 │   └── live_transactions.csv                      # Live simulator transaction buffer
 │
 ├── benchmark_industry_vs_scratch/                 # Head-to-Head Industry Benchmark Study
@@ -162,6 +167,20 @@ C:\Users\HP\Desktop\PDS\
 │   ├── README.md                                  # Course requirements & marking scheme breakdown
 │   ├── PDS_Project Rubrics.pdf                    # Official course rubric document
 │   └── PDS_Project_Rubrics.pdf                    # Rubric backup copy
+│
+├── tests/                                         # Mathematical Unit Tests & Numerical Gradient Verification
+│   ├── run_tests.py                               # Standalone colored test runner
+│   ├── test_gradient_checking.py                  # Finite-difference analytical gradient tests (<1e-5 error)
+│   ├── test_numerical_stability.py                # Logit overflow, extreme amounts & zero-variance guards
+│   ├── test_mathematical_invariants.py            # He normal variance & loss monotonicity invariants
+│   └── README.md                                  # Complete testing guide & execution instructions
+│
+├── adversarial_security/                          # Fintech Adversarial Evasion & Red-Teaming Suite
+│   ├── adversarial_engine.py                      # FGSM perturbation & boundary search engine
+│   ├── run_red_team_audit.py                      # Multi-architecture penetration test runner
+│   ├── red_team_results.csv                       # Empirical evasion rates across epsilon budgets
+│   ├── figures/                                   # High-resolution adversarial robustness curves
+│   └── README.md                                  # Threat model, security findings & resume bullets
 │
 └── archive/                                       # Production Web Platform (Archived for clean submission)
     ├── app.py                                     # Interactive Streamlit Intelligence Dashboard

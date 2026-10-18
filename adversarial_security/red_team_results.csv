@@ -1,0 +1,43 @@
+Epsilon_Budget,Model_Architecture,Evasion_Success_Rate_%,Avg_Risk_Reduction_%,Tested_Attacks
+0.1,Baseline Logistic Regression (NumPy),0.0,2.52,7
+0.1,Cost-Sensitive LogReg (NumPy),0.0,2.38,9
+0.1,Multi-Layer Perceptron (NumPy MLP),0.0,2.08,8
+0.1,Gradient Boosted Trees (NumPy GBDT),0.0,3.48,8
+0.1,Unsupervised Isolation Profiler (NumPy),0.0,0.16,3
+0.1,Soft-Voting Ensemble (Scratch Champion),0.0,1.73,8
+0.25,Baseline Logistic Regression (NumPy),0.0,6.98,7
+0.25,Cost-Sensitive LogReg (NumPy),11.11,6.41,9
+0.25,Multi-Layer Perceptron (NumPy MLP),0.0,5.43,8
+0.25,Gradient Boosted Trees (NumPy GBDT),0.0,5.75,8
+0.25,Unsupervised Isolation Profiler (NumPy),0.0,0.36,3
+0.25,Soft-Voting Ensemble (Scratch Champion),0.0,4.39,8
+0.5,Baseline Logistic Regression (NumPy),14.29,15.6,7
+0.5,Cost-Sensitive LogReg (NumPy),11.11,14.04,9
+0.5,Multi-Layer Perceptron (NumPy MLP),25.0,11.77,8
+0.5,Gradient Boosted Trees (NumPy GBDT),0.0,10.78,8
+0.5,Unsupervised Isolation Profiler (NumPy),0.0,0.57,3
+0.5,Soft-Voting Ensemble (Scratch Champion),12.5,9.87,8
+0.75,Baseline Logistic Regression (NumPy),28.57,25.71,7
+0.75,Cost-Sensitive LogReg (NumPy),22.22,22.44,9
+0.75,Multi-Layer Perceptron (NumPy MLP),25.0,18.25,8
+0.75,Gradient Boosted Trees (NumPy GBDT),0.0,12.17,8
+0.75,Unsupervised Isolation Profiler (NumPy),0.0,0.62,3
+0.75,Soft-Voting Ensemble (Scratch Champion),12.5,14.66,8
+1.0,Baseline Logistic Regression (NumPy),28.57,37.42,7
+1.0,Cost-Sensitive LogReg (NumPy),44.44,31.15,9
+1.0,Multi-Layer Perceptron (NumPy MLP),25.0,24.39,8
+1.0,Gradient Boosted Trees (NumPy GBDT),0.0,12.17,8
+1.0,Unsupervised Isolation Profiler (NumPy),0.0,0.5,3
+1.0,Soft-Voting Ensemble (Scratch Champion),25.0,19.09,8
+1.5,Baseline Logistic Regression (NumPy),57.14,62.57,7
+1.5,Cost-Sensitive LogReg (NumPy),44.44,50.23,9
+1.5,Multi-Layer Perceptron (NumPy MLP),37.5,36.95,8
+1.5,Gradient Boosted Trees (NumPy GBDT),0.0,12.17,8
+1.5,Unsupervised Isolation Profiler (NumPy),0.0,-0.2,3
+1.5,Soft-Voting Ensemble (Scratch Champion),37.5,28.63,8
+2.0,Baseline Logistic Regression (NumPy),100.0,79.59,7
+2.0,Cost-Sensitive LogReg (NumPy),66.67,70.53,9
+2.0,Multi-Layer Perceptron (NumPy MLP),62.5,50.87,8
+2.0,Gradient Boosted Trees (NumPy GBDT),0.0,12.17,8
+2.0,Unsupervised Isolation Profiler (NumPy),0.0,-1.47,3
+2.0,Soft-Voting Ensemble (Scratch Champion),62.5,39.21,8
