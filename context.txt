@@ -1,7 +1,8 @@
 # 📋 PROJECT CONTINUITY & CONTEXT HANDOFF DOCUMENT
 **Project:** Credit Card Fraud Detection (Dual-Track: Academic Capstone & Industry Portfolio)  
 **Target Workspace Directory:** `C:\Users\HP\Desktop\PDS`  
-**Last Updated:** October 17, 2026  
+**GitHub Repository:** https://github.com/Manas-Jain-24/fraud-intelligence-platform  
+**Last Updated:** October 18, 2026  
 **Author / Student:** Kartik Kumthe
 
 ---
