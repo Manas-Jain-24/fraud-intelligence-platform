@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 80)
     if exit_code == 0:
-        print(f"  [SUCCESS] ALL 11 MATHEMATICAL VERIFICATION TESTS PASSED ({elapsed:.2f}s)")
+        print(f"  [SUCCESS] ALL 16 MATHEMATICAL & LEDGER INVARIANT TESTS PASSED ({elapsed:.2f}s)")
     else:
         print(f"  [FAILURE] TEST SUITE FAILED with exit code {exit_code}")
     print("=" * 80)

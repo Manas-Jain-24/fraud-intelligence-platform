@@ -1,0 +1,50 @@
+[
+  {
+    "id": "CASE-PAYSIM-01",
+    "label": "Legitimate Everyday Peer-to-Peer Transfer",
+    "type": "TRANSFER",
+    "amount": 250.0,
+    "oldbalanceOrg": 1200.0,
+    "newbalanceOrig": 950.0,
+    "oldbalanceDest": 500.0,
+    "newbalanceDest": 750.0,
+    "expected": "BENIGN",
+    "story": "Alice transfers $250 to Bob for dinner. Ledger balances reconcile perfectly with $0 discrepancy."
+  },
+  {
+    "id": "CASE-PAYSIM-02",
+    "label": "Legitimate Merchant Cash-Out",
+    "type": "CASH_OUT",
+    "amount": 1500.0,
+    "oldbalanceOrg": 5000.0,
+    "newbalanceOrig": 3500.0,
+    "oldbalanceDest": 12000.0,
+    "newbalanceDest": 13500.0,
+    "expected": "BENIGN",
+    "story": "Merchant withdraws funds at an authorized agent kiosk. Partial balance drain, recipient balance increases by exact amount."
+  },
+  {
+    "id": "CASE-PAYSIM-03",
+    "label": "Mule Account Drain (Full Balance Drained to $0)",
+    "type": "TRANSFER",
+    "amount": 450000.0,
+    "oldbalanceOrg": 450000.0,
+    "newbalanceOrig": 0.0,
+    "oldbalanceDest": 0.0,
+    "newbalanceDest": 0.0,
+    "expected": "FRAUD",
+    "story": "Account takeover: Attacker drains entire $450k balance to zero in a single high-value transfer to an unverified mule wallet whose balance remains zero (immediate cash-out)."
+  },
+  {
+    "id": "CASE-PAYSIM-04",
+    "label": "Synthetic Overdraft Ghost Balance Discrepancy",
+    "type": "CASH_OUT",
+    "amount": 180000.0,
+    "oldbalanceOrg": 25000.0,
+    "newbalanceOrig": 0.0,
+    "oldbalanceDest": 0.0,
+    "newbalanceDest": 180000.0,
+    "expected": "FRAUD",
+    "story": "Exploited gateway vulnerability: Attacker cashes out $180,000 from an account that only contained $25,000, creating an unresolved $155,000 balance discrepancy."
+  }
+]

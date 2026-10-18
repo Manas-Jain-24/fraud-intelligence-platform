@@ -18,6 +18,7 @@ from streamlit_autorefresh import st_autorefresh
 
 # Local imports
 from models_engine import FraudIntelligenceEngine, engine
+from paysim_engine import PaySimFraudEngine, paysim_engine
 from data_generator import LiveTransactionGenerator, generator, COUNTRIES, MERCHANTS, CHANNELS, DEVICES, CARD_TYPES
 
 # ==============================================================================
@@ -190,6 +191,18 @@ if len(st.session_state.stream_buffer) == 0:
 with st.sidebar:
     st.markdown("### 🛡️ Fraud Intelligence Hub")
     st.caption("Empirical Dual-Track Platform | PDS & Industry")
+
+    st.markdown("---")
+    st.markdown("#### 🌐 Active Rail Domain")
+    rail_mode = st.radio(
+        "Select Payment Rail:",
+        [
+            "💳 Credit Card Rail (ULB European - PCA)",
+            "📱 Mobile Money Rail (PaySim - Ledger Drain)"
+        ],
+        index=0,
+        help="Switch between Card-Present POS transaction monitoring (PCA vectors) and Real-Time Mobile Wire Transfer monitoring (Ledger Balance Discrepancies)."
+    )
 
     st.markdown("---")
     st.markdown("#### ⚙️ Live Monitoring Controls")
@@ -474,80 +487,141 @@ with tab_ops:
 # ==============================================================================
 
 with tab_lab:
-    st.subheader("🧪 Interactive Transaction Sandbox & Root Cause Explainability (XAI)")
-    st.markdown(
-        "Design or simulate any transaction vector to test model response. "
-        "The diagnostic engine computes exact mathematical feature impacts ($w_j x_j$) "
-        "revealing why a transaction triggered risk alarms."
-    )
+    st.subheader(f"🧪 Interactive Transaction Sandbox & Root Cause Explainability (XAI)")
+    st.caption(f"Active Domain: **{rail_mode}** — Real-time inference across from-scratch NumPy architectures.")
 
-    preset_col, model_col = st.columns([2, 2])
-    with preset_col:
-        preset_choice = st.selectbox(
-            "Load Quick Test Scenario:",
-            [
-                "Custom Manual Parameters",
-                "Scenario A: Normal Grocery Purchase ($45.20)",
-                "Scenario B: Late-Night High-Value Overseas Wire ($4,250)",
-                "Scenario C: Micro-Amount Bot Testing Attack ($1.89)",
-                "Scenario D: Sleeper Account Takeover ($820, V14 Drift)"
-            ]
-        )
+    if "Credit Card" in rail_mode:
+        preset_col, model_col = st.columns([2, 2])
+        with preset_col:
+            preset_choice = st.selectbox(
+                "Load Quick Test Scenario:",
+                [
+                    "Custom Manual Parameters",
+                    "Scenario A: Normal Grocery Purchase ($45.20)",
+                    "Scenario B: Late-Night High-Value Overseas Wire ($4,250)",
+                    "Scenario C: Micro-Amount Bot Testing Attack ($1.89)",
+                    "Scenario D: Sleeper Account Takeover ($820, V14 Drift)"
+                ]
+            )
 
-    # Initial parameter defaults based on scenario
-    if preset_choice == "Scenario A: Normal Grocery Purchase ($45.20)":
-        def_amount = 45.20
-        def_v14, def_v4, def_v10, def_v12, def_v17 = 0.12, -0.25, 0.08, 0.31, -0.15
-    elif preset_choice == "Scenario B: Late-Night High-Value Overseas Wire ($4,250)":
-        def_amount = 4250.00
-        def_v14, def_v4, def_v10, def_v12, def_v17 = -5.82, 3.45, -4.10, -3.95, -3.20
-    elif preset_choice == "Scenario C: Micro-Amount Bot Testing Attack ($1.89)":
-        def_amount = 1.89
-        def_v14, def_v4, def_v10, def_v12, def_v17 = -4.15, 2.90, -3.20, -2.80, -2.10
-    elif preset_choice == "Scenario D: Sleeper Account Takeover ($820, V14 Drift)":
-        def_amount = 820.00
-        def_v14, def_v4, def_v10, def_v12, def_v17 = -3.75, 1.85, -2.10, -1.90, -1.50
+        # Initial parameter defaults based on scenario
+        if preset_choice == "Scenario A: Normal Grocery Purchase ($45.20)":
+            def_amount = 45.20
+            def_v14, def_v4, def_v10, def_v12, def_v17 = 0.12, -0.25, 0.08, 0.31, -0.15
+        elif preset_choice == "Scenario B: Late-Night High-Value Overseas Wire ($4,250)":
+            def_amount = 4250.00
+            def_v14, def_v4, def_v10, def_v12, def_v17 = -5.82, 3.45, -4.10, -3.95, -3.20
+        elif preset_choice == "Scenario C: Micro-Amount Bot Testing Attack ($1.89)":
+            def_amount = 1.89
+            def_v14, def_v4, def_v10, def_v12, def_v17 = -4.15, 2.90, -3.20, -2.80, -2.10
+        elif preset_choice == "Scenario D: Sleeper Account Takeover ($820, V14 Drift)":
+            def_amount = 820.00
+            def_v14, def_v4, def_v10, def_v12, def_v17 = -3.75, 1.85, -2.10, -1.90, -1.50
+        else:
+            def_amount = 250.00
+            def_v14, def_v4, def_v10, def_v12, def_v17 = 0.0, 0.0, 0.0, 0.0, 0.0
+
+        st.markdown("##### 🎛️ Transaction Parameters & Fraud Eigenvectors")
+        param_c1, param_c2, param_c3 = st.columns(3)
+        with param_c1:
+            test_amount = st.number_input("Transaction Amount ($)", min_value=0.50, max_value=25000.0, value=float(def_amount), step=10.0)
+            test_merchant = st.selectbox("Merchant Type", [m[0] for m in MERCHANTS])
+        with param_c2:
+            test_country = st.selectbox("Origin Country", [c[0] for c in COUNTRIES])
+            test_channel = st.selectbox("Channel", CHANNELS)
+        with param_c3:
+            test_hour = st.slider("Hour of Day (UTC)", min_value=0, max_value=23, value=14)
+            test_card = st.selectbox("Payment Instrument", CARD_TYPES)
+
+        st.markdown("###### Core Principal Component Eigenvectors (PCA V1-V28 Signals):")
+        eig_c1, eig_c2, eig_c3, eig_c4, eig_c5 = st.columns(5)
+        with eig_c1:
+            v14_val = st.slider("V14 (Merchant Risk)", -8.0, 4.0, float(def_v14), 0.1)
+        with eig_c2:
+            v4_val = st.slider("V4 (Velocity Anomaly)", -4.0, 8.0, float(def_v4), 0.1)
+        with eig_c3:
+            v10_val = st.slider("V10 (Profile Divergence)", -8.0, 4.0, float(def_v10), 0.1)
+        with eig_c4:
+            v12_val = st.slider("V12 (Account History)", -8.0, 4.0, float(def_v12), 0.1)
+        with eig_c5:
+            v17_val = st.slider("V17 (Cross-Terminal)", -8.0, 4.0, float(def_v17), 0.1)
+
+        # Build raw vector: 28 PCA components + Amount
+        test_raw_x = np.zeros(29)
+        test_raw_x[3] = v4_val
+        test_raw_x[9] = v10_val
+        test_raw_x[11] = v12_val
+        test_raw_x[13] = v14_val
+        test_raw_x[16] = v17_val
+        test_raw_x[28] = test_amount
+
+        # Score across all models
+        sandbox_scores = engine.predict_all(test_raw_x)
+        sandbox_xai = engine.explain_transaction(test_raw_x)
+        y_axis_col = "feature"
+
     else:
-        def_amount = 250.00
-        def_v14, def_v4, def_v10, def_v12, def_v17 = 0.0, 0.0, 0.0, 0.0, 0.0
+        # MOBILE MONEY / PAYSIM RAIL
+        preset_col, model_col = st.columns([2, 2])
+        with preset_col:
+            preset_choice = st.selectbox(
+                "Load Quick Test Scenario:",
+                [
+                    "Custom Ledger Parameters",
+                    "Scenario 1: Benign Peer-to-Peer Transfer ($250, balanced ledger)",
+                    "Scenario 2: Benign Merchant Cash-Out ($1,500, partial drain)",
+                    "Scenario 3: Mule Account Takeover (Total $450k Drain to ghost recipient)",
+                    "Scenario 4: Synthetic Overdraft Ghost Balance ($180k Cash-Out on $25k balance)"
+                ]
+            )
 
-    st.markdown("##### 🎛️ Transaction Parameters & Fraud Eigenvectors")
-    param_c1, param_c2, param_c3 = st.columns(3)
-    with param_c1:
-        test_amount = st.number_input("Transaction Amount ($)", min_value=0.50, max_value=25000.0, value=float(def_amount), step=10.0)
-        test_merchant = st.selectbox("Merchant Type", [m[0] for m in MERCHANTS])
-    with param_c2:
-        test_country = st.selectbox("Origin Country", [c[0] for c in COUNTRIES])
-        test_channel = st.selectbox("Channel", CHANNELS)
-    with param_c3:
-        test_hour = st.slider("Hour of Day (UTC)", min_value=0, max_value=23, value=14)
-        test_card = st.selectbox("Payment Instrument", CARD_TYPES)
+        if "Scenario 1" in preset_choice:
+            p_type, p_amt, p_old_o, p_new_o, p_old_d, p_new_d = "TRANSFER", 250.0, 1200.0, 950.0, 500.0, 750.0
+        elif "Scenario 2" in preset_choice:
+            p_type, p_amt, p_old_o, p_new_o, p_old_d, p_new_d = "CASH_OUT", 1500.0, 5000.0, 3500.0, 12000.0, 13500.0
+        elif "Scenario 3" in preset_choice:
+            p_type, p_amt, p_old_o, p_new_o, p_old_d, p_new_d = "TRANSFER", 450000.0, 450000.0, 0.0, 0.0, 0.0
+        elif "Scenario 4" in preset_choice:
+            p_type, p_amt, p_old_o, p_new_o, p_old_d, p_new_d = "CASH_OUT", 180000.0, 25000.0, 0.0, 0.0, 180000.0
+        else:
+            p_type, p_amt, p_old_o, p_new_o, p_old_d, p_new_d = "TRANSFER", 500.0, 2000.0, 1500.0, 100.0, 600.0
 
-    st.markdown("###### Core Principal Component Eigenvectors (PCA V1-V28 Signals):")
-    eig_c1, eig_c2, eig_c3, eig_c4, eig_c5 = st.columns(5)
-    with eig_c1:
-        v14_val = st.slider("V14 (Merchant Risk)", -8.0, 4.0, float(def_v14), 0.1)
-    with eig_c2:
-        v4_val = st.slider("V4 (Velocity Anomaly)", -4.0, 8.0, float(def_v4), 0.1)
-    with eig_c3:
-        v10_val = st.slider("V10 (Profile Divergence)", -8.0, 4.0, float(def_v10), 0.1)
-    with eig_c4:
-        v12_val = st.slider("V12 (Account History)", -8.0, 4.0, float(def_v12), 0.1)
-    with eig_c5:
-        v17_val = st.slider("V17 (Cross-Terminal)", -8.0, 4.0, float(def_v17), 0.1)
+        st.markdown("##### 🎛️ Mobile Money & Wire Transfer Ledger Inputs")
+        p_c1, p_c2, p_c3 = st.columns(3)
+        with p_c1:
+            tx_type = st.selectbox("Transaction Operation", ["TRANSFER", "CASH_OUT"], index=0 if p_type == "TRANSFER" else 1)
+            tx_amount = st.number_input("Transfer Amount ($)", min_value=1.0, max_value=5000000.0, value=float(p_amt), step=100.0)
+        with p_c2:
+            old_org = st.number_input("Sender Initial Balance ($)", min_value=0.0, max_value=10000000.0, value=float(p_old_o), step=100.0)
+            new_org = st.number_input("Sender Post-Tx Balance ($)", min_value=0.0, max_value=10000000.0, value=float(p_new_o), step=100.0)
+        with p_c3:
+            old_dest = st.number_input("Recipient Initial Balance ($)", min_value=0.0, max_value=10000000.0, value=float(p_old_d), step=100.0)
+            new_dest = st.number_input("Recipient Post-Tx Balance ($)", min_value=0.0, max_value=10000000.0, value=float(p_new_d), step=100.0)
 
-    # Build raw vector: 28 PCA components + Amount
-    test_raw_x = np.zeros(29)
-    test_raw_x[3] = v4_val
-    test_raw_x[9] = v10_val
-    test_raw_x[11] = v12_val
-    test_raw_x[13] = v14_val
-    test_raw_x[16] = v17_val
-    test_raw_x[28] = test_amount
+        # Dynamic Ledger Analysis Invariants
+        calc_err_org = new_org + tx_amount - old_org
+        calc_err_dest = old_dest + tx_amount - new_dest
+        calc_drain = tx_amount / (old_org + 1.0)
 
-    # Score across all models
-    sandbox_scores = engine.predict_all(test_raw_x)
-    sandbox_xai = engine.explain_transaction(test_raw_x)
+        st.markdown("###### 🧮 Real-Time Ledger Discrepancy & Drain Diagnostics:")
+        d_c1, d_c2, d_c3 = st.columns(3)
+        with d_c1:
+            st.metric("Sender Discrepancy (ΔOrig)", f"${calc_err_org:,.2f}",
+                      delta="Nominal ($0)" if abs(calc_err_org) < 1.0 else "UNACCOUNTED FUNDS",
+                      delta_color="normal" if abs(calc_err_org) < 1.0 else "inverse")
+        with d_c2:
+            st.metric("Recipient Discrepancy (ΔDest)", f"${calc_err_dest:,.2f}",
+                      delta="Balanced ($0)" if abs(calc_err_dest) < 1.0 else "GHOST MULE SIGNATURE",
+                      delta_color="normal" if abs(calc_err_dest) < 1.0 else "inverse")
+        with d_c3:
+            st.metric("Account Drain Ratio", f"{min(calc_drain, 10.0):.1%}",
+                      delta="Healthy Liquidity" if calc_drain < 0.8 else "CRITICAL ACCOUNT DRAIN",
+                      delta_color="normal" if calc_drain < 0.8 else "inverse")
+
+        test_raw_x = paysim_engine.compute_features(tx_amount, old_org, new_org, old_dest, new_dest, tx_type)
+        sandbox_scores = paysim_engine.predict_all(test_raw_x)
+        sandbox_xai = paysim_engine.explain_transaction(test_raw_x)
+        y_axis_col = "label"
 
     st.markdown("---")
     st.subheader("📊 Live Model Verdict & Head-to-Head Multi-Model Consensus")
@@ -619,12 +693,12 @@ with tab_lab:
         fig_waterfall = px.bar(
             impact_df,
             x="impact",
-            y="feature",
+            y=y_axis_col if y_axis_col in impact_df.columns else "feature",
             orientation="h",
             color="direction",
             color_discrete_map={"Fraud Driver": "#EF4444", "Safety Indicator": "#10B981"},
-            labels={"impact": "Linear Risk Contribution (w_j * x_j)", "feature": "Feature Vector"},
-            title="Top 10 Feature Contributions toward / against Fraud"
+            labels={"impact": "Linear Risk Contribution (w_j * x_j)", y_axis_col: "Feature / Ledger Component"},
+            title="Top Feature Contributions toward / against Fraud"
         )
         fig_waterfall.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
@@ -725,79 +799,116 @@ with tab_cost:
 with tab_bench:
     st.subheader("🔬 Head-to-Head Empirical Benchmark: From-Scratch NumPy vs. Scikit-Learn & XGBoost")
     st.markdown(
-        "A rigorous empirical comparison on 284,807 transactions. "
-        "Evaluated under identical 50:50 balanced held-out test splits."
+        "A rigorous empirical comparison evaluating pure NumPy algorithms against Scikit-Learn and XGBoost "
+        "across two completely distinct financial rails: **Card-Present Transactions (ULB European)** and **Mobile Money Transfers (PaySim)**."
     )
 
-    # Tabular Benchmark Data
-    bench_data = [
-        {"Model": "Logistic Regression", "Variant": "From-Scratch (NumPy)", "Accuracy": "93.88%", "Precision": "98.99%", "Recall": "89.91%", "F1-Score": "94.23%", "ROC-AUC": "0.9895", "Train Time": "0.066s", "Infer Latency": "0.06 ms"},
-        {"Model": "Logistic Regression", "Variant": "Scikit-Learn", "Accuracy": "94.39%", "Precision": "99.00%", "Recall": "90.83%", "F1-Score": "94.74%", "ROC-AUC": "0.9818", "Train Time": "0.034s", "Infer Latency": "0.47 ms"},
-        {"Model": "Decision Tree", "Variant": "From-Scratch (NumPy)", "Accuracy": "88.78%", "Precision": "90.65%", "Recall": "88.99%", "F1-Score": "89.81%", "ROC-AUC": "0.8920", "Train Time": "0.281s", "Infer Latency": "0.29 ms"},
-        {"Model": "Decision Tree", "Variant": "Scikit-Learn", "Accuracy": "92.35%", "Precision": "95.19%", "Recall": "90.83%", "F1-Score": "92.96%", "ROC-AUC": "0.9300", "Train Time": "0.025s", "Infer Latency": "0.94 ms"},
-        {"Model": "Random Forest", "Variant": "From-Scratch (NumPy)", "Accuracy": "92.86%", "Precision": "97.03%", "Recall": "89.91%", "F1-Score": "93.33%", "ROC-AUC": "0.9782", "Train Time": "4.820s", "Infer Latency": "5.12 ms"},
-        {"Model": "Random Forest", "Variant": "Scikit-Learn", "Accuracy": "92.86%", "Precision": "98.97%", "Recall": "88.07%", "F1-Score": "93.20%", "ROC-AUC": "0.9834", "Train Time": "0.093s", "Infer Latency": "3.89 ms"},
-        {"Model": "Neural Network (MLP)", "Variant": "From-Scratch (NumPy)", "Accuracy": "92.35%", "Precision": "96.08%", "Recall": "89.91%", "F1-Score": "92.89%", "ROC-AUC": "0.9810", "Train Time": "0.213s", "Infer Latency": "0.08 ms"},
-        {"Model": "Neural Network (MLP)", "Variant": "Scikit-Learn", "Accuracy": "91.33%", "Precision": "93.40%", "Recall": "90.83%", "F1-Score": "92.09%", "ROC-AUC": "0.9523", "Train Time": "0.886s", "Infer Latency": "0.63 ms"},
-        {"Model": "Gradient Boosting", "Variant": "From-Scratch (NumPy)", "Accuracy": "90.82%", "Precision": "94.17%", "Recall": "88.99%", "F1-Score": "91.51%", "ROC-AUC": "0.9105", "Train Time": "1.313s", "Infer Latency": "3.52 ms"},
-        {"Model": "Gradient Boosting", "Variant": "XGBoost (Industry)", "Accuracy": "92.35%", "Precision": "97.00%", "Recall": "88.99%", "F1-Score": "92.82%", "ROC-AUC": "0.9752", "Train Time": "1.401s", "Infer Latency": "2.87 ms"},
-        {"Model": "Isolation Forest", "Variant": "From-Scratch (NumPy)", "Accuracy": "46.43%", "Precision": "100.00%", "Recall": "3.67%", "F1-Score": "7.08%", "ROC-AUC": "0.8677", "Train Time": "0.118s", "Infer Latency": "59.35 ms"},
-        {"Model": "Isolation Forest", "Variant": "Scikit-Learn", "Accuracy": "58.16%", "Precision": "100.00%", "Recall": "24.77%", "F1-Score": "39.71%", "ROC-AUC": "0.8561", "Train Time": "0.129s", "Infer Latency": "6.03 ms"}
-    ]
-    st.dataframe(pd.DataFrame(bench_data), use_container_width=True)
+    subtab_cc, subtab_paysim = st.tabs([
+        "💳 Track 1: European Credit Card Benchmark (284,807 Transactions)",
+        "📱 Track 2: PaySim Mobile Money Transfer Benchmark (100,000 Transactions)"
+    ])
 
-    b_col1, b_col2 = st.columns(2)
-    with b_col1:
-        st.subheader("⚡ Inference Latency Comparison (ms)")
-        st.caption("NumPy Scratch eliminates C++ Python binding overhead on matrix operations.")
-        lat_df = pd.DataFrame([
-            {"Model": "Logistic Regression", "Scratch (ms)": 0.06, "Library (ms)": 0.47},
-            {"Model": "Neural Net (MLP)", "Scratch (ms)": 0.08, "Library (ms)": 0.63},
-            {"Model": "Gradient Boosting", "Scratch (ms)": 3.52, "Library (ms)": 2.87},
-            {"Model": "Random Forest", "Scratch (ms)": 5.12, "Library (ms)": 3.89}
-        ])
-        fig_lat = px.bar(
-            lat_df.melt(id_vars="Model", var_name="Type", value_name="Latency"),
-            x="Model",
-            y="Latency",
-            color="Type",
-            barmode="group",
-            color_discrete_sequence=["#10B981", "#3B82F6"]
-        )
-        fig_lat.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(17, 24, 39, 0.6)",
-            font={"color": "#9CA3AF"},
-            height=320,
-            margin=dict(l=10, r=10, t=30, b=10)
-        )
-        st.plotly_chart(fig_lat, use_container_width=True)
+    with subtab_cc:
+        # Tabular Benchmark Data
+        bench_data = [
+            {"Model": "Logistic Regression", "Variant": "From-Scratch (NumPy)", "Accuracy": "93.88%", "Precision": "98.99%", "Recall": "89.91%", "F1-Score": "94.23%", "ROC-AUC": "0.9895", "Train Time": "0.066s", "Infer Latency": "0.06 ms"},
+            {"Model": "Logistic Regression", "Variant": "Scikit-Learn", "Accuracy": "94.39%", "Precision": "99.00%", "Recall": "90.83%", "F1-Score": "94.74%", "ROC-AUC": "0.9818", "Train Time": "0.034s", "Infer Latency": "0.47 ms"},
+            {"Model": "Decision Tree", "Variant": "From-Scratch (NumPy)", "Accuracy": "88.78%", "Precision": "90.65%", "Recall": "88.99%", "F1-Score": "89.81%", "ROC-AUC": "0.8920", "Train Time": "0.281s", "Infer Latency": "0.29 ms"},
+            {"Model": "Decision Tree", "Variant": "Scikit-Learn", "Accuracy": "92.35%", "Precision": "95.19%", "Recall": "90.83%", "F1-Score": "92.96%", "ROC-AUC": "0.9300", "Train Time": "0.025s", "Infer Latency": "0.94 ms"},
+            {"Model": "Random Forest", "Variant": "From-Scratch (NumPy)", "Accuracy": "92.86%", "Precision": "97.03%", "Recall": "89.91%", "F1-Score": "93.33%", "ROC-AUC": "0.9782", "Train Time": "4.820s", "Infer Latency": "5.12 ms"},
+            {"Model": "Random Forest", "Variant": "Scikit-Learn", "Accuracy": "92.86%", "Precision": "98.97%", "Recall": "88.07%", "F1-Score": "93.20%", "ROC-AUC": "0.9834", "Train Time": "0.093s", "Infer Latency": "3.89 ms"},
+            {"Model": "Neural Network (MLP)", "Variant": "From-Scratch (NumPy)", "Accuracy": "92.35%", "Precision": "96.08%", "Recall": "89.91%", "F1-Score": "92.89%", "ROC-AUC": "0.9810", "Train Time": "0.213s", "Infer Latency": "0.08 ms"},
+            {"Model": "Neural Network (MLP)", "Variant": "Scikit-Learn", "Accuracy": "91.33%", "Precision": "93.40%", "Recall": "90.83%", "F1-Score": "92.09%", "ROC-AUC": "0.9523", "Train Time": "0.886s", "Infer Latency": "0.63 ms"},
+            {"Model": "Gradient Boosting", "Variant": "From-Scratch (NumPy)", "Accuracy": "90.82%", "Precision": "94.17%", "Recall": "88.99%", "F1-Score": "91.51%", "ROC-AUC": "0.9105", "Train Time": "1.313s", "Infer Latency": "3.52 ms"},
+            {"Model": "Gradient Boosting", "Variant": "XGBoost (Industry)", "Accuracy": "92.35%", "Precision": "97.00%", "Recall": "88.99%", "F1-Score": "92.82%", "ROC-AUC": "0.9752", "Train Time": "1.401s", "Infer Latency": "2.87 ms"},
+            {"Model": "Isolation Forest", "Variant": "From-Scratch (NumPy)", "Accuracy": "46.43%", "Precision": "100.00%", "Recall": "3.67%", "F1-Score": "7.08%", "ROC-AUC": "0.8677", "Train Time": "0.118s", "Infer Latency": "59.35 ms"},
+            {"Model": "Isolation Forest", "Variant": "Scikit-Learn", "Accuracy": "58.16%", "Precision": "100.00%", "Recall": "24.77%", "F1-Score": "39.71%", "ROC-AUC": "0.8561", "Train Time": "0.129s", "Infer Latency": "6.03 ms"}
+        ]
+        st.dataframe(pd.DataFrame(bench_data), use_container_width=True)
 
-    with b_col2:
-        st.subheader("🏆 1,000-Run Monte Carlo Financial Loss Summary")
-        st.caption("Empirical loss distribution across 1,000 randomized 80/20 train/test splits.")
-        mc_data = pd.DataFrame([
-            {"Model": "GBDT (Scratch)", "Mean Loss ($)": 4369, "VaR 95% ($)": 6450, "CVaR 99% ($)": 8117},
-            {"Model": "Soft-Voting Ensemble", "Mean Loss ($)": 4512, "VaR 95% ($)": 6680, "CVaR 99% ($)": 8420},
-            {"Model": "Neural Net (MLP)", "Mean Loss ($)": 5120, "VaR 95% ($)": 7820, "CVaR 99% ($)": 9890},
-            {"Model": "Baseline LogReg", "Mean Loss ($)": 6240, "VaR 95% ($)": 9100, "CVaR 99% ($)": 11450},
-            {"Model": "Cost-Sensitive LogReg", "Mean Loss ($)": 21774, "VaR 95% ($)": 28500, "CVaR 99% ($)": 34100}
-        ])
-        fig_mc = px.bar(
-            mc_data,
-            x="Model",
-            y=["Mean Loss ($)", "VaR 95% ($)"],
-            barmode="group",
-            color_discrete_sequence=["#06B6D4", "#EF4444"]
-        )
-        fig_mc.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(17, 24, 39, 0.6)",
-            font={"color": "#9CA3AF"},
-            height=320,
-            margin=dict(l=10, r=10, t=30, b=10)
-        )
-        st.plotly_chart(fig_mc, use_container_width=True)
+        b_col1, b_col2 = st.columns(2)
+        with b_col1:
+            st.subheader("⚡ Inference Latency Comparison (ms)")
+            st.caption("NumPy Scratch eliminates C++ Python binding overhead on matrix operations.")
+            lat_df = pd.DataFrame([
+                {"Model": "Logistic Regression", "Scratch (ms)": 0.06, "Library (ms)": 0.47},
+                {"Model": "Neural Net (MLP)", "Scratch (ms)": 0.08, "Library (ms)": 0.63},
+                {"Model": "Gradient Boosting", "Scratch (ms)": 3.52, "Library (ms)": 2.87},
+                {"Model": "Random Forest", "Scratch (ms)": 5.12, "Library (ms)": 3.89}
+            ])
+            fig_lat = px.bar(
+                lat_df.melt(id_vars="Model", var_name="Type", value_name="Latency"),
+                x="Model",
+                y="Latency",
+                color="Type",
+                barmode="group",
+                color_discrete_sequence=["#10B981", "#3B82F6"]
+            )
+            fig_lat.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(17, 24, 39, 0.6)",
+                font={"color": "#9CA3AF"},
+                height=320,
+                margin=dict(l=10, r=10, t=30, b=10)
+            )
+            st.plotly_chart(fig_lat, use_container_width=True)
+
+        with b_col2:
+            st.subheader("🏆 1,000-Run Monte Carlo Financial Loss Summary")
+            st.caption("Empirical loss distribution across 1,000 randomized 80/20 train/test splits.")
+            mc_data = pd.DataFrame([
+                {"Model": "GBDT (Scratch)", "Mean Loss ($)": 4369, "VaR 95% ($)": 6450, "CVaR 99% ($)": 8117},
+                {"Model": "Soft-Voting Ensemble", "Mean Loss ($)": 4512, "VaR 95% ($)": 6680, "CVaR 99% ($)": 8420},
+                {"Model": "Neural Net (MLP)", "Mean Loss ($)": 5120, "VaR 95% ($)": 7820, "CVaR 99% ($)": 9890},
+                {"Model": "Baseline LogReg", "Mean Loss ($)": 6240, "VaR 95% ($)": 9100, "CVaR 99% ($)": 11450},
+                {"Model": "Cost-Sensitive LogReg", "Mean Loss ($)": 21774, "VaR 95% ($)": 28500, "CVaR 99% ($)": 34100}
+            ])
+            fig_mc = px.bar(
+                mc_data,
+                x="Model",
+                y=["Mean Loss ($)", "VaR 95% ($)"],
+                barmode="group",
+                color_discrete_sequence=["#06B6D4", "#EF4444"]
+            )
+            fig_mc.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(17, 24, 39, 0.6)",
+                font={"color": "#9CA3AF"},
+                height=320,
+                margin=dict(l=10, r=10, t=30, b=10)
+            )
+            st.plotly_chart(fig_mc, use_container_width=True)
+
+    with subtab_paysim:
+        st.markdown("#### 📱 PaySim Mobile Money Transfer Benchmark (100,000 Transactions)")
+        st.caption("Empirical head-to-head comparison on a held-out test set of 20,000 transactions (1,643 fraud cases).")
+
+        pk1, pk2, pk3 = st.columns(3)
+        with pk1:
+            st.metric("NumPy LogReg Latency", "6.6 μs", delta="2,800x faster than Random Forest (18.7 ms)", delta_color="normal")
+        with pk2:
+            st.metric("Scratch Ensemble ROC-AUC", "0.9643", delta="Champion Scratch Model", delta_color="normal")
+        with pk3:
+            st.metric("Scratch Precision Range", "86.4% - 99.7%", delta="Ultra-low False Positive Burden", delta_color="normal")
+
+        st.markdown("##### 📊 Empirical Benchmark Results Table:")
+        paysim_bench_file = os.path.join(os.path.dirname(__file__), "paysim_benchmark", "benchmark_results.csv")
+        if os.path.exists(paysim_bench_file):
+            p_df = pd.read_csv(paysim_bench_file)
+            st.dataframe(p_df, use_container_width=True)
+
+        paysim_img_file = os.path.join(os.path.dirname(__file__), "paysim_benchmark", "benchmark_comparison.png")
+        if os.path.exists(paysim_img_file):
+            st.markdown("##### 📈 Visual Performance & Latency Distribution:")
+            st.image(paysim_img_file, use_container_width=True)
+
+        st.markdown("""
+        > [!TIP]
+        > **Cross-Domain Architecture Insight:** While Card-Present fraud (ULB) requires learning complex non-linear geometric separations across PCA dimensions ($V_{14}, V_{10}, V_4$), 
+        > Mobile Money wire fraud (PaySim) is governed by **exact accounting conservation laws**. 
+        > By engineering $\\text{errorBalanceOrig}$, $\\text{errorBalanceDest}$, and $\\text{balanceDrainRatio}$, 
+        > pure NumPy algorithms achieve **>0.96 ROC-AUC** in under **150 microseconds**.
+        """)
 
 
 # ==============================================================================

@@ -6,23 +6,25 @@
 [![Streamlit](https://img.shields.io/badge/Interactive_Dashboard-Streamlit_1.66-FF4B4B.svg?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Scikit-Learn](https://img.shields.io/badge/Industry_Benchmark-Scikit--Learn_1.9-F7931E.svg?style=flat&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![XGBoost](https://img.shields.io/badge/Industry_Benchmark-XGBoost_3.4-1182C5.svg?style=flat&logo=xgboost&logoColor=white)](https://xgboost.readthedocs.io/)
-[![Pytest](https://img.shields.io/badge/Mathematical_Tests-11_Passed-brightgreen.svg?style=flat&logo=pytest&logoColor=white)](tests/)
+[![Pytest](https://img.shields.io/badge/Mathematical_Tests-16_Passed-brightgreen.svg?style=flat&logo=pytest&logoColor=white)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
 ## 📌 Executive Overview
 
-**Fraud Intelligence Platform** is a dual-track machine learning research and financial operations platform evaluated on the benchmark [ULB Machine Learning Group dataset](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud) (**284,807 European cardholder transactions, 492 fraud cases, 0.1727% extreme class asymmetry**).
+**Fraud Intelligence Platform** is a dual-track, multi-rail machine learning research and financial risk operations platform evaluated across two distinct financial crime domains:
+1. **Card-Present POS Intelligence:** [ULB Machine Learning Group dataset](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud) (**284,807 European cardholder transactions, 492 fraud cases, 0.1727% extreme class asymmetry**).
+2. **Mobile Money & Wire Transfer Intelligence:** [PaySim Mobile Money dataset](https://www.kaggle.com/datasets/ealaxi/paysim1) (**100,000 curated benchmark transactions, all 8,213 fraud cases, ledger balance drain analysis**).
 
 Rather than relying solely on black-box wrappers (`import sklearn`, `import xgboost`), this project bridges **mathematical first-principles algorithmic design** with **production-grade enterprise architecture**:
 
 1. **Seven Algorithms Built From Scratch in Pure NumPy:** Linear, cost-sensitive, neural network, tree-based, unsupervised anomaly, and multi-paradigm ensembles built without third-party ML dependencies.
-2. **Head-to-Head Industry Benchmark:** Empirical performance, memory, and latency comparison of from-scratch algorithms against compiled C++/Cython libraries (**Scikit-Learn** and **XGBoost**).
+2. **Dual-Track Cross-Domain Benchmarks:** Empirical performance, memory, and latency comparison of from-scratch algorithms against compiled C++/Cython libraries (**Scikit-Learn** and **XGBoost**) across both credit card POS swipes and mobile wire transfers.
 3. **1,000-Run Monte Carlo Simulation ($N = 1,000$):** Multi-process statistical evaluation over 7,000 independent model fits and 56,962,000 out-of-sample predictions, modeling expected financial loss, Value-at-Risk ($\text{VaR}_{95\%}$), and Conditional Value-at-Risk ($\text{CVaR}_{99\%}$).
-4. **Interactive Fraud Operations Dashboard (Streamlit):** Real-time transaction ticker, Explainable AI (XAI) feature attribution, dynamic cost matrix optimizer ($\tau^*$), and live transaction sandbox.
+4. **Interactive Fraud Operations Dashboard (Streamlit):** Dual-rail selector (Credit Card vs Mobile Money), real-time transaction ticker, Explainable AI (XAI) feature attribution, dynamic cost matrix optimizer ($\tau^*$), and live transaction sandbox.
 5. **Fintech Adversarial Evasion & Red-Teaming Suite:** Fast Gradient Sign Method (FGSM) perturbation defense and structured smurfing/transaction splitting simulation.
-6. **Mathematical Gradient Verification Suite (Pytest):** Finite-difference gradient checks ensuring analytical backpropagation relative error $< 10^{-5}$.
+6. **Mathematical Gradient Verification Suite (Pytest):** Finite-difference gradient checks and ledger invariant tests ensuring mathematical precision.
 
 ---
 
@@ -75,6 +77,33 @@ Evaluated under identical 50:50 balanced held-out test splits on 284,807 financi
 1. **7.8x Faster Linear Inference:** By eliminating Scikit-Learn's type validation wrappers, pure NumPy dot-products achieve **0.06 ms** raw inference latency.
 2. **Scratch Neural Net Beats Scikit-Learn MLP:** He normal initialization and momentum acceleration enable higher precision (96.08% vs 93.40%), higher ROC-AUC (0.9810 vs 0.9523), and 4x faster training convergence (0.21s vs 0.88s).
 3. **Recall Parity in Tree Ensembles:** From-scratch Random Forest matches Scikit-Learn's accuracy identically (92.86%) and delivers higher fraud recall (89.91% vs 88.07%).
+
+---
+
+## 📱 Cross-Domain Intelligence: PaySim Mobile Money Benchmark (100,000 Transactions)
+
+To evaluate **cross-domain generalization**, the platform integrates and benchmarks the [PaySim Mobile Money Transfer Dataset](https://www.kaggle.com/datasets/ealaxi/paysim1) (**100,000 curated benchmark transactions with all 8,213 fraud instances**). 
+
+Unlike card-present POS swipes governed by latent PCA eigenvectors ($V_1 - V_{28}$), mobile money and wire transfer fraud (e.g., RTP, M-Pesa, UPI, FedNow) is governed by **exact ledger balance conservation laws**:
+
+$$\text{errorBalanceOrig} = \text{newbalanceOrig} + \text{amount} - \text{oldbalanceOrg}$$
+$$\text{errorBalanceDest} = \text{oldbalanceDest} + \text{amount} - \text{newbalanceDest}$$
+$$\text{balanceDrainRatio} = \frac{\text{amount}}{\text{oldbalanceOrg} + 1.0}$$
+
+### Empirical Benchmark on Held-Out Test Set (20,000 Transactions, 1,643 Frauds):
+
+| Model Architecture | Implementation Type | ROC-AUC | PR-AUC | F1-Score | Recall | Precision | Latency |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Scratch Baseline LogReg** | **From-Scratch (NumPy)** | **0.9331** | 0.7649 | 0.5549 | 38.59% | **98.75%** | **7.4 μs** |
+| **Scratch Cost-Sensitive LogReg** | **From-Scratch (NumPy)** | **0.9519** | **0.7986** | **0.7434** | 65.25% | 86.38% | **6.6 μs** |
+| **Scratch MLP Neural Net (32-16-1)** | **From-Scratch (NumPy)** | **0.9012** | 0.7391 | 0.3715 | 22.82% | **99.73%** | **11.2 μs** |
+| **Scratch Stump GBDT (30 Trees)** | **From-Scratch (NumPy)** | **0.9641** | 0.6045 | 0.0000 | 0.00% | 0.00% | **125.4 μs** |
+| **Scratch Soft-Voting Ensemble (Champion)** | **From-Scratch (NumPy)** | **0.9643** | **0.8168** | 0.3865 | 23.98% | **99.49%** | **143.3 μs** |
+| Scikit-Learn LogReg (Balanced) | Industry Standard | 0.9770 | 0.8634 | 0.6618 | 87.58% | 53.18% | 72.3 μs |
+| Scikit-Learn Random Forest | Industry Standard | 0.9994 | 0.9990 | 0.9991 | 99.82% | 100.0% | 18,702.1 μs |
+| **XGBoost Classifier** | Industry Standard | 0.9993 | 0.9990 | 0.9970 | 99.88% | 99.51% | 575.1 μs |
+
+**Key Finding:** Pure NumPy Cost-Sensitive Logistic Regression is **2,800x faster** than Scikit-Learn Random Forest (6.6 μs vs 18.7 ms) with **0.9519 ROC-AUC** and **86.4% precision**, enabling high-throughput wire gateway deployment at 150,000 transactions/second.
 
 ---
 
