@@ -3,7 +3,7 @@
 **Target Workspace Directory:** `C:\Users\HP\Desktop\PDS`  
 **GitHub Repository:** https://github.com/Manas-Jain-24/fraud-intelligence-platform  
 **Last Updated:** October 18, 2026  
-**Author / Student:** Kartik Kumthe
+**Author / Student:** Manas Jain
 
 ---
 

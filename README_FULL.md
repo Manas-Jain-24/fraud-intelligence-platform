@@ -162,8 +162,8 @@ Credit-Card-Fraud-Detection-Model/
 
 ### 1. Environment Setup
 ```bash
-git clone https://github.com/kartik7115-edu/Credit-Card-Fraud-Detection-Model.git
-cd Credit-Card-Fraud-Detection-Model
+git clone https://github.com/Manas-Jain-24/fraud-intelligence-platform.git
+cd fraud-intelligence-platform
 
 python -m venv venv
 venv\Scripts\activate   # Windows
