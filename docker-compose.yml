@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # 1. High-Throughput Sub-Millisecond FastAPI Microservice
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fraud-intelligence-platform-api:latest
+    container_name: fraud_api_gateway
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --workers 2
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - fraud_network
+
+  # 2. Interactive Real-Time Streamlit Operations Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fraud-intelligence-platform-dashboard:latest
+    container_name: fraud_analytics_dashboard
+    command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - fraud_network
+
+networks:
+  fraud_network:
+    driver: bridge

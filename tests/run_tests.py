@@ -14,6 +14,10 @@ import pytest
 
 if __name__ == "__main__":
     test_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(test_dir)
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
     print("=" * 80)
     print("  MATHEMATICAL GRADIENT VERIFICATION & NUMERICAL STABILITY TEST SUITE")
     print("=" * 80)
@@ -30,7 +34,7 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 80)
     if exit_code == 0:
-        print(f"  [SUCCESS] ALL 16 MATHEMATICAL & LEDGER INVARIANT TESTS PASSED ({elapsed:.2f}s)")
+        print(f"  [SUCCESS] ALL MATHEMATICAL, LEDGER & FASTAPI INVARIANT TESTS PASSED ({elapsed:.2f}s)")
     else:
         print(f"  [FAILURE] TEST SUITE FAILED with exit code {exit_code}")
     print("=" * 80)

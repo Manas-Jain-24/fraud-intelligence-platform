@@ -2,11 +2,12 @@
 ### *End-to-End Financial Risk Engine, Real-Time Streaming Ticker, XAI Diagnostics & Adversarial Red-Teaming*
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![CI Pipeline](https://github.com/Manas-Jain-24/fraud-intelligence-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Manas-Jain-24/fraud-intelligence-platform/actions/workflows/ci.yml)
 [![Pure NumPy](https://img.shields.io/badge/Algorithms-100%25_From_Scratch-013243.svg?style=flat&logo=numpy&logoColor=white)](https://numpy.org/)
-[![Streamlit](https://img.shields.io/badge/Interactive_Dashboard-Streamlit_1.66-FF4B4B.svg?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Scikit-Learn](https://img.shields.io/badge/Industry_Benchmark-Scikit--Learn_1.9-F7931E.svg?style=flat&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
-[![XGBoost](https://img.shields.io/badge/Industry_Benchmark-XGBoost_3.4-1182C5.svg?style=flat&logo=xgboost&logoColor=white)](https://xgboost.readthedocs.io/)
-[![Pytest](https://img.shields.io/badge/Mathematical_Tests-16_Passed-brightgreen.svg?style=flat&logo=pytest&logoColor=white)](tests/)
+[![FastAPI](https://img.shields.io/badge/Microservice-FastAPI_0.143-009688.svg?style=flat&logo=fastapi&logoColor=white)](api.py)
+[![Docker](https://img.shields.io/badge/Container-Docker_Compose-2496ED.svg?style=flat&logo=docker&logoColor=white)](docker-compose.yml)
+[![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit_1.66-FF4B4B.svg?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Pytest](https://img.shields.io/badge/Unit_Tests-27_Passed-brightgreen.svg?style=flat&logo=pytest&logoColor=white)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -29,27 +30,48 @@ Rather than relying solely on black-box wrappers (`import sklearn`, `import xgbo
 ---
 
 ## 🏛️ System Architecture
-
+ 
 ```mermaid
-graph TD
-    Data["Kaggle European Transactions (284,807 Records)"] --> Engine["models_engine.py (NumPy First-Principles Engine)"]
-    
-    subgraph "From-Scratch Algorithmic Suite (Pure NumPy)"
-        Engine --> M1["Baseline Logistic Regression (0.06ms)"]
-        Engine --> M2["Cost-Sensitive LogReg (95.5% Recall)"]
-        Engine --> M3["Multi-Layer Perceptron (He-Normal + Momentum)"]
-        Engine --> M4["Gradient Boosted Trees ($4,369 Loss Min)"]
-        Engine --> M5["Unsupervised Isolation Profiler"]
-        Engine --> M6["Soft-Voting Ensemble (ROC-AUC 0.9808)"]
+flowchart TB
+    subgraph DataRails["Dual Ingestion Payment Rails"]
+        CC["Card-Present POS (ULB European, 284k Tx)"]
+        MM["Mobile Money & Wire Transfer (PaySim, 100k Tx)"]
     end
 
-    subgraph "Operational & Testing Interfaces"
-        Engine --> App["app.py (Streamlit Interactive Command Center)"]
-        Engine --> Tests["tests/ (11 Mathematical Invariant Tests)"]
-        Engine --> RedTeam["adversarial_security/ (FGSM & Smurfing Defense)"]
-        Engine --> Sim["simulations/ (1,000-Run Monte Carlo Suite)"]
-        Engine --> Bench["benchmark_industry_vs_scratch/ (vs Sklearn & XGBoost)"]
+    subgraph CoreEngine["Pure NumPy Mathematical Inference Engines"]
+        E1["models_engine.py (Card Engine)"]
+        E2["paysim_engine.py (Wire Ledger Discrepancy Engine)"]
+        
+        M1["Cost-Sensitive LogReg (6.6μs, 0.9519 AUC)"]
+        M2["Scratch MLP Neural Net (32-16-1)"]
+        M3["Stump GBDT (Functional Gradient Descent)"]
+        M4["Soft-Voting Ensemble (Champion: 0.9808 AUC)"]
+        M5["XAI Diagnostic Attribution Engine"]
     end
+
+    subgraph ServiceLayer["Production Microservice & Deployment"]
+        API["FastAPI REST Microservice (api.py)<br/>0.81ms Round-Trip SLA"]
+        UI["Interactive Operations Dashboard (app.py)<br/>Streamlit 1.66"]
+        Docker["Docker & Docker-Compose Multi-Container"]
+        CI["GitHub Actions CI/CD Pipeline (Python 3.11-3.13)"]
+    end
+
+    subgraph Validation["Verification & Red-Teaming Suites"]
+        Tests["tests/ (27 Gradient & API Unit Tests)"]
+        Sim["simulations/ (1,000-Run Monte Carlo Suite)"]
+        RedTeam["adversarial_security/ (FGSM & Smurfing Defense)"]
+    end
+
+    CC --> E1
+    MM --> E2
+    E1 --> M1 & M2 & M3 & M4 & M5
+    E2 --> M1 & M2 & M3 & M4 & M5
+
+    M4 & M5 --> API
+    M4 & M5 --> UI
+    API & UI --> Docker
+    Docker --> CI
+    CoreEngine --> Tests & Sim & RedTeam
 ```
 
 ---
@@ -214,7 +236,13 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements_full.txt
 ```
 
-### 2. Launch the Interactive Dashboard
+### 2. Launch the High-Throughput REST API Microservice
+```bash
+uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+```
+Access interactive OpenAPI Swagger documentation at: `http://localhost:8000/docs`
+
+### 3. Launch the Interactive Dashboard
 ```bash
 streamlit run app.py
 ```
@@ -225,24 +253,125 @@ Open your browser to `http://localhost:8501` to access:
 * **🔬 Benchmark Hub:** Head-to-head empirical metrics and inference speed comparisons.
 * **📂 Kaggle Case Study:** Blind testing on 20 verified real-world European cardholder transactions.
 
-### 3. Run the Mathematical Test Suite
+### 4. Run the Master Verification & API Test Suite
 ```bash
 python tests/run_tests.py
 # Or directly via pytest:
 pytest -v tests/
 ```
 
-### 4. Execute the Adversarial Red-Team Audit
+### 5. Execute the Adversarial Red-Team Audit
 ```bash
 python adversarial_security/run_red_team_audit.py
 ```
 
-### 5. Run the 1,000-Run Monte Carlo Simulation
+### 6. Run the Monte Carlo Simulation Suites
 ```bash
+# Credit Card Rail (1,000 runs):
 python simulations/run_1000_simulations.py
+
+# Mobile Money PaySim Rail (50 runs):
+python simulations/run_paysim_simulation.py
 ```
+
+---
+
+## ⚡ Production FastAPI Microservice & Sub-Millisecond Gateway
+
+The platform exposes an asynchronous, production-grade **FastAPI microservice** (`api.py`) engineered for low-latency payment rails:
+
+* **Sub-Millisecond Round-Trip SLA:** Benchmarked at **0.81 ms** average end-to-end API round-trip latency (`X-Process-Time-Ms` response header).
+* **RAM Footprint:** Serialized NumPy weights (`.npz`) occupy **< 15 KB RAM**, eliminating multi-gigabyte PyTorch/TensorFlow container overhead.
+* **Dual Ingestion Contracts:** Strict Pydantic V2 schemas for Card POS (28 PCA components) and Wire Transfers (Ledger discrepancy vectors).
+
+### REST Endpoints Catalog:
+| HTTP Verb | Path | Description | Response Time |
+| :--- | :--- | :--- | :---: |
+| `GET` | `/v1/health` | Operational health probe & memory diagnostics | < 0.5 ms |
+| `GET` | `/v1/models` | Registry of active models, ROC-AUCs & latencies | < 0.5 ms |
+| `POST` | `/v1/score/card` | Real-time scoring for Credit Card transactions | < 0.8 ms |
+| `POST` | `/v1/score/wire` | Real-time scoring for Mobile Money & Wire transfers | < 0.8 ms |
+| `POST` | `/v1/explain/card`| XAI linear feature impact & diagnostic narrative | < 1.0 ms |
+| `POST` | `/v1/explain/wire`| XAI ledger anomaly attribution & forensic narrative | < 1.0 ms |
+| `GET` | `/v1/samples/wire`| Pre-built sample scenarios (Mule drains, P2P) | < 0.5 ms |
+
+### Example cURL Scoring Request (Wire Transfer Mule Drain):
+```bash
+curl -X POST "http://localhost:8000/v1/score/wire" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "type": "TRANSFER",
+       "amount": 450000.0,
+       "oldbalanceOrg": 450000.0,
+       "newbalanceOrig": 0.0,
+       "oldbalanceDest": 0.0,
+       "newbalanceDest": 0.0
+     }'
+```
+
+#### JSON Response Contract:
+```json
+{
+  "rail": "Mobile Money / Wire Transfer (PaySim)",
+  "is_fraud": true,
+  "risk_score": 0.7653,
+  "risk_level": "HIGH",
+  "threshold_applied": 0.75,
+  "latency_microseconds": 145.2,
+  "model_breakdown": {
+    "baseline_logistic_regression": 0.9412,
+    "cost_sensitive_logistic_regression": 0.9681,
+    "multilayer_perceptron_neural_net": 0.9701,
+    "gradient_boosted_decision_trees": 0.6937,
+    "unsupervised_isolation_profiler": 0.6271,
+    "champion_soft_voting_ensemble": 0.7653
+  },
+  "ledger_anomalies": {
+    "errorBalanceOrig": 0.0,
+    "errorBalanceDest": 450000.0,
+    "balanceDrainRatio": 1.0,
+    "isTransfer": true
+  }
+}
+```
+
+---
+
+## 🐳 Docker Multi-Container Deployment
+
+Spin up the entire platform (FastAPI Microservice + Streamlit Dashboard) with a single command:
+
+```bash
+docker compose up --build
+```
+
+* **API Gateway:** Available at `http://localhost:8000` (Docs: `http://localhost:8000/docs`)
+* **Analytics Dashboard:** Available at `http://localhost:8501`
+* **Enterprise Security:** Runs under an unprivileged non-root user (`appuser`, UID 1001) with native healthchecks and isolated bridge networking.
+
+---
+
+## 💼 High-Impact Resume Bullets (SWE / MLE / Fintech)
+
+*Copy-paste ready bullet points for Software Engineering, Machine Learning Engineering, and Fintech roles:*
+
+* **Full-Stack ML Systems & Microservices:**
+  > *"Architected and deployed a dual-rail real-time financial fraud intelligence platform with FastAPI and pure NumPy, achieving 0.81 ms round-trip inference latency (2,800x faster than Random Forest) and 0.9808 ROC-AUC across 284,807 transactions."*
+
+* **Algorithmic Engineering from Scratch:**
+  > *"Engineered 7 production ML models from first mathematical principles without third-party frameworks (Cost-Sensitive LogReg, 32-16-1 MLP, Decision Stumps GBDT, Soft-Voting Ensemble), verified via finite-difference gradient checks ($< 10^{-5}$ error) and 27 automated unit tests."*
+
+* **Statistical Simulation & Risk Modeling:**
+  > *"Developed parallelized Monte Carlo simulation suites (1,000-iteration and 50-iteration splits across CPU cores) modeling Value-at-Risk ($\text{VaR}_{95\%}$) and ledger discrepancy invariants across Credit Card POS swipes and PaySim Mobile Money wire transfers."*
+
+* **Explainable AI (XAI) & Adversarial Defense:**
+  > *"Implemented real-time feature attribution and automated diagnostic narrative generation for regulatory compliance (FCRA/GDPR); evaluated model robustness against Fast Gradient Sign Method (FGSM) attacks and structured smurfing (achieving 100% interception on 2-split transactions)."*
+
+* **Containerization & CI/CD Pipeline:**
+  > *"Containerized multi-service architecture with Docker and Docker-Compose with non-root security controls; established GitHub Actions CI/CD matrix testing across Python 3.11, 3.12, and 3.13 ensuring 100% green build status."*
 
 ---
 
 ## 📄 License
 This project is licensed under the [MIT License](LICENSE).
+Author: **Manas Jain** (`manasj1234567890@gmail.com`)
