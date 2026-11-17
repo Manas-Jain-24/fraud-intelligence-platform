@@ -20,10 +20,12 @@ from api import app, card_engine, wire_engine
 
 
 @pytest.fixture(scope="module")
-def client():
-    """Initializes TestClient and enters lifespan context so models are preloaded."""
-    with TestClient(app) as test_client:
-        yield test_client
+def client(tmp_path_factory):
+    """Legacy contracts are deterministic, independent of locally selected artifacts."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setenv("FRAUD_ARTIFACT_DIR", str(tmp_path_factory.mktemp("legacy_artifacts")))
+        with TestClient(app) as test_client:
+            yield test_client
 
 
 def test_root_endpoint(client):
@@ -139,7 +141,9 @@ def test_score_wire_mule_drain_fraud(client):
     assert data["risk_score"] >= 0.75
     assert data["risk_level"] in ["HIGH", "CRITICAL"]
     assert data["model_breakdown"]["cost_sensitive_logistic_regression"] > 0.95
-    assert data["ledger_anomalies"]["balanceDrainRatio"] == 1.0
+    assert data["ledger_anomalies"]["balanceDrainRatio"] == pytest.approx(450000 / 450001)
+    assert data["assessment_stage"] == "post_transaction"
+    assert data["action"] == "REVIEW"
 
 
 def test_explain_wire_transfer_narrative(client):

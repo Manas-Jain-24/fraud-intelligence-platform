@@ -14,6 +14,11 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+from dataclasses import replace
+from fraud_ops.artifacts import get_bundle, legacy_bundle
+from fraud_ops.policy import DecisionPolicy
+from fraud_ops.service import assess
+from fraud_ops.dashboard import render_investigations, render_evaluation
 from streamlit_autorefresh import st_autorefresh
 
 # Local imports
@@ -216,16 +221,20 @@ with st.sidebar:
         st.session_state.stream_buffer.insert(0, attack_tx)
         st.session_state.total_screened += 1
         st.session_state.dollars_screened += attack_tx['amount']
-        st.session_state.frauds_blocked += 1
-        st.session_state.dollars_saved += attack_tx['amount']
-        st.session_state.latest_intercept = attack_tx
-        st.toast(f"🚨 Intercepted High-Risk Fraud: ${attack_tx['amount']:.2f} at {attack_tx['merchant']}", icon="🚨")
+        if attack_tx["status"] == "BLOCKED":
+            st.session_state.frauds_blocked += 1
+            st.session_state.dollars_saved += attack_tx["amount"]
+            st.session_state.latest_intercept = attack_tx
+        elif attack_tx["status"] == "FLAGGED":
+            st.session_state.flagged_count += 1
+        st.toast(f"Added synthetic attack example: ${attack_tx['amount']:.2f} — {attack_tx['status']}", icon="🚨")
 
     st.markdown("---")
     st.markdown("#### 🧠 Primary Decision Model")
     selected_model_name = st.selectbox(
-        "Scoring Model Architecture:",
+        "Sandbox scoring model:",
         [
+            "Active evaluated model",
             "Soft-Voting Ensemble (Scratch Champion)",
             "Gradient Boosted Trees (NumPy GBDT)",
             "Multi-Layer Perceptron (NumPy MLP)",
@@ -237,12 +246,20 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.markdown("#### 📊 Risk Classification Cutoffs")
+    active_profile = "card" if "Credit Card" in rail_mode else "wire"
+    active_bundle = get_bundle(active_profile)
+    st.caption(f"Active local model: {active_bundle.model_name} · {active_bundle.score_kind}")
+    st.markdown("#### 📊 Sandbox Policy Cutoffs")
+    st.caption("Defaults come from the active model. Overrides apply to the sandbox; recorded transactions retain their original policy.")
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        flag_thresh = st.number_input("Flag ($\tau_1$)", min_value=0.10, max_value=0.60, value=0.40, step=0.05)
+        flag_thresh = st.number_input("Review threshold", min_value=0.0, max_value=1.0, value=float(active_bundle.policy.flag_threshold), step=0.01, key=f"flag_{active_profile}")
     with col_t2:
-        block_thresh = st.number_input("Block ($\tau_2$)", min_value=0.50, max_value=0.95, value=0.75, step=0.05)
+        block_thresh = st.number_input("High-risk threshold", min_value=0.0, max_value=1.0, value=float(active_bundle.policy.block_threshold), step=0.01, key=f"block_{active_profile}")
+
+    if flag_thresh > block_thresh:
+        st.warning("Review threshold is limited to the high-risk threshold.")
+        flag_thresh = block_thresh
 
     if st.button("🧹 Reset Stream Buffer", use_container_width=True):
         st.session_state.stream_buffer = generator.generate_batch(count=10)
@@ -277,8 +294,8 @@ with col_h1:
 with col_h2:
     st.markdown(
         f"<div style='text-align: right; padding-top: 15px;'>"
-        f"<span style='color: #10B981; font-weight: 600;'>● LIVE OPERATIONAL</span><br>"
-        f"<span style='color: #9CA3AF; font-size: 0.85rem;'>Engine Latency: <b>0.08 ms</b> | Split: 50:50 Balanced</span>"
+        f"<span style='color: #10B981; font-weight: 600;'>● LOCAL INVESTIGATION LAB</span><br>"
+        f"<span style='color: #9CA3AF; font-size: 0.85rem;'>Active model: {active_bundle.model_name}</span>"
         f"</div>",
         unsafe_allow_html=True
     )
@@ -290,7 +307,9 @@ st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 # 5. MASTER TABS
 # ==============================================================================
 
-tab_ops, tab_lab, tab_cost, tab_bench, tab_kaggle = st.tabs([
+tab_cases, tab_evaluation, tab_ops, tab_lab, tab_cost, tab_bench, tab_kaggle = st.tabs([
+    "Investigation Queue",
+    "Measured Evaluation",
     "🚨 Live Command Center",
     "🧪 Sandbox & Explainability Lab",
     "⚖️ Financial Cost Matrix & Loss Optimizer",
@@ -303,15 +322,22 @@ tab_ops, tab_lab, tab_cost, tab_bench, tab_kaggle = st.tabs([
 # TAB 1: LIVE COMMAND CENTER
 # ==============================================================================
 
+with tab_cases:
+    render_investigations()
+
+with tab_evaluation:
+    render_evaluation()
+
 with tab_ops:
+    st.caption("Synthetic card stream. Each event is saved locally and may open an investigation case. The rail selector controls the sandbox.")
     # Top KPI Metrics Bar
     m1, m2, m3, m4, m5 = st.columns(5)
     with m1:
         st.metric("Transactions Screened", f"{st.session_state.total_screened:,}")
     with m2:
-        st.metric("Total Frauds Intercepted", f"{st.session_state.frauds_blocked:,}", delta=f"{st.session_state.frauds_blocked / max(1, st.session_state.total_screened):.1%} rate")
+        st.metric("Simulated declines", f"{st.session_state.frauds_blocked:,}", delta=f"{st.session_state.frauds_blocked / max(1, st.session_state.total_screened):.1%} rate")
     with m3:
-        st.metric("Fraud Losses Prevented", f"${st.session_state.dollars_saved:,.2f}", delta="Net Capital Saved", delta_color="normal")
+        st.metric("Amount marked for decline", f"${st.session_state.dollars_saved:,.2f}", delta="Synthetic recommendations", delta_color="normal")
     with m4:
         st.metric("Flagged for MFA Verification", f"{st.session_state.flagged_count:,}")
     with m5:
@@ -326,12 +352,12 @@ with tab_ops:
         <div class="intercept-banner">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <b style="color: #EF4444; font-size: 1.05rem;">🚨 CRITICAL FRAUD INTERCEPTION DETECTED ({intc['tx_id']})</b><br>
+                    <b style="color: #EF4444; font-size: 1.05rem;">SIMULATED HIGH-RISK RECOMMENDATION ({intc['tx_id']})</b><br>
                     <span style="color: #E5E7EB; font-size: 0.9rem;">
                         <b>Merchant:</b> {intc['merchant']} ({intc['country']}) &nbsp;|&nbsp;
                         <b>Amount:</b> ${intc['amount']:,.2f} &nbsp;|&nbsp;
                         <b>Channel:</b> {intc['channel']} &nbsp;|&nbsp;
-                        <b>Risk Probability:</b> <span style="color: #EF4444; font-weight: 700;">{intc['fraud_probability']:.1%}</span>
+                        <b>Model Score:</b> <span style="color: #EF4444; font-weight: 700;">{intc['fraud_probability']:.1%}</span>
                     </span>
                 </div>
                 <div style="text-align: right;">
@@ -349,7 +375,7 @@ with tab_ops:
 
     with stream_col:
         st.subheader("📡 Real-Time Transaction Stream")
-        st.caption("Live streaming transactions scored instantaneously through the Scratch Soft-Voting Ensemble.")
+        st.caption("Synthetic card transactions scored by the active local artifact and routed with observed-history rules.")
 
         # Build display table
         display_rows = []
@@ -407,8 +433,8 @@ with tab_ops:
                 },
                 labels={"fraud_probability": "Fraud Risk Score", "timestamp": "Timestamp", "status": "Action"}
             )
-            fig_timeline.add_hline(y=block_thresh, line_dash="dash", line_color="#EF4444", annotation_text="Block Threshold")
-            fig_timeline.add_hline(y=flag_thresh, line_dash="dot", line_color="#F59E0B", annotation_text="MFA Threshold")
+            fig_timeline.add_hline(y=get_bundle("card").policy.block_threshold, line_dash="dash", line_color="#EF4444", annotation_text="Block Threshold")
+            fig_timeline.add_hline(y=get_bundle("card").policy.flag_threshold, line_dash="dot", line_color="#F59E0B", annotation_text="MFA Threshold")
             fig_timeline.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(17, 24, 39, 0.6)",
@@ -536,15 +562,15 @@ with tab_lab:
         st.markdown("###### Core Principal Component Eigenvectors (PCA V1-V28 Signals):")
         eig_c1, eig_c2, eig_c3, eig_c4, eig_c5 = st.columns(5)
         with eig_c1:
-            v14_val = st.slider("V14 (Merchant Risk)", -8.0, 4.0, float(def_v14), 0.1)
+            v14_val = st.slider("V14 (PCA component)", -8.0, 4.0, float(def_v14), 0.1)
         with eig_c2:
-            v4_val = st.slider("V4 (Velocity Anomaly)", -4.0, 8.0, float(def_v4), 0.1)
+            v4_val = st.slider("V4 (PCA component)", -4.0, 8.0, float(def_v4), 0.1)
         with eig_c3:
-            v10_val = st.slider("V10 (Profile Divergence)", -8.0, 4.0, float(def_v10), 0.1)
+            v10_val = st.slider("V10 (PCA component)", -8.0, 4.0, float(def_v10), 0.1)
         with eig_c4:
-            v12_val = st.slider("V12 (Account History)", -8.0, 4.0, float(def_v12), 0.1)
+            v12_val = st.slider("V12 (PCA component)", -8.0, 4.0, float(def_v12), 0.1)
         with eig_c5:
-            v17_val = st.slider("V17 (Cross-Terminal)", -8.0, 4.0, float(def_v17), 0.1)
+            v17_val = st.slider("V17 (PCA component)", -8.0, 4.0, float(def_v17), 0.1)
 
         # Build raw vector: 28 PCA components + Amount
         test_raw_x = np.zeros(29)
@@ -556,8 +582,8 @@ with tab_lab:
         test_raw_x[28] = test_amount
 
         # Score across all models
+        sandbox_payload = {"amount": test_amount, "v_features": {f"V{i+1}": float(test_raw_x[i]) for i in range(28)}}
         sandbox_scores = engine.predict_all(test_raw_x)
-        sandbox_xai = engine.explain_transaction(test_raw_x)
         y_axis_col = "feature"
 
     else:
@@ -614,35 +640,44 @@ with tab_lab:
                       delta="Balanced ($0)" if abs(calc_err_dest) < 1.0 else "GHOST MULE SIGNATURE",
                       delta_color="normal" if abs(calc_err_dest) < 1.0 else "inverse")
         with d_c3:
-            st.metric("Account Drain Ratio", f"{min(calc_drain, 10.0):.1%}",
+            st.metric("Amount / (initial balance + 1)", f"{calc_drain:.3f}",
                       delta="Healthy Liquidity" if calc_drain < 0.8 else "CRITICAL ACCOUNT DRAIN",
                       delta_color="normal" if calc_drain < 0.8 else "inverse")
 
         test_raw_x = paysim_engine.compute_features(tx_amount, old_org, new_org, old_dest, new_dest, tx_type)
+        sandbox_payload = {"type": tx_type, "amount": tx_amount, "oldbalanceOrg": old_org, "newbalanceOrig": new_org, "oldbalanceDest": old_dest, "newbalanceDest": new_dest}
         sandbox_scores = paysim_engine.predict_all(test_raw_x)
-        sandbox_xai = paysim_engine.explain_transaction(test_raw_x)
         y_axis_col = "label"
 
     st.markdown("---")
+    sandbox_bundle = active_bundle
+    if selected_model_name != "Active evaluated model":
+        sandbox_bundle = replace(legacy_bundle(active_profile), model_name=selected_model_name, scratch_model_name=selected_model_name)
+    sandbox_bundle = replace(sandbox_bundle, policy=DecisionPolicy(flag_thresh, block_thresh))
+    sandbox_result = assess(active_profile, sandbox_payload, explain=True, bundle=sandbox_bundle)
+    sandbox_xai = sandbox_result["explanation"]
+    st.caption(f"{sandbox_result['model_name']} · {sandbox_result['score_kind']} · {sandbox_result['assessment_stage']}")
+    if active_profile == "wire":
+        st.info("This ledger model uses post-transaction balances. Its recommendation is retrospective review. Use the investigation form's wire_pre profile for pre-transfer scoring.")
     st.subheader("📊 Live Model Verdict & Head-to-Head Multi-Model Consensus")
 
     res_gauge_col, res_models_col = st.columns([1.5, 2.5])
 
     with res_gauge_col:
-        champ_prob = sandbox_scores["Soft-Voting Ensemble (Scratch Champion)"]
+        champ_prob = sandbox_result["risk_score"]
         fig_gauge = go.Figure(go.Indicator(
             mode="gauge+number",
             value=champ_prob * 100,
-            title={'text': "Ensemble Fraud Risk", 'font': {'color': '#F3F4F6', 'size': 18}},
-            number={'suffix': "%", 'font': {'color': '#EF4444' if champ_prob > 0.7 else ('#F59E0B' if champ_prob > 0.4 else '#10B981')}},
+            title={'text': "Selected Model Score", 'font': {'color': '#F3F4F6', 'size': 18}},
+            number={'suffix': "%", 'font': {'color': '#EF4444' if champ_prob >= block_thresh else ('#F59E0B' if champ_prob >= flag_thresh else '#10B981')}},
             gauge={
                 'axis': {'range': [0, 100], 'tickcolor': '#9CA3AF'},
-                'bar': {'color': '#EF4444' if champ_prob > 0.7 else ('#F59E0B' if champ_prob > 0.4 else '#10B981'), 'thickness': 0.3},
+                'bar': {'color': '#EF4444' if champ_prob >= block_thresh else ('#F59E0B' if champ_prob >= flag_thresh else '#10B981'), 'thickness': 0.3},
                 'bgcolor': "rgba(31, 41, 55, 0.5)",
                 'steps': [
-                    {'range': [0, 40], 'color': "rgba(16, 185, 129, 0.2)"},
-                    {'range': [40, 75], 'color': "rgba(245, 158, 11, 0.2)"},
-                    {'range': [75, 100], 'color': "rgba(239, 68, 68, 0.2)"}
+                    {'range': [0, flag_thresh * 100], 'color': "rgba(16, 185, 129, 0.2)"},
+                    {'range': [flag_thresh * 100, block_thresh * 100], 'color': "rgba(245, 158, 11, 0.2)"},
+                    {'range': [block_thresh * 100, 100], 'color': "rgba(239, 68, 68, 0.2)"}
                 ],
                 'threshold': {
                     'line': {'color': "#EF4444", 'width': 4},
@@ -660,33 +695,30 @@ with tab_lab:
         st.plotly_chart(fig_gauge, use_container_width=True)
 
         if champ_prob >= block_thresh:
-            st.error(f"🚨 **VERDICT: HARD DECLINE & BLOCK** (Risk: {champ_prob:.1%})")
+            st.error(f"**Recommendation: {sandbox_result['action']}** (Score: {champ_prob:.4f})")
         elif champ_prob >= flag_thresh:
-            st.warning(f"⚠️ **VERDICT: STEP-UP MFA REQUIRED** (Risk: {champ_prob:.1%})")
+            st.warning(f"**Recommendation: REVIEW** (Score: {champ_prob:.4f})")
         else:
-            st.success(f"✅ **VERDICT: INSTANT APPROVAL** (Risk: {champ_prob:.1%})")
+            st.success(f"**Recommendation: PASS** (Score: {champ_prob:.4f})")
 
     with res_models_col:
-        st.markdown("##### 🏛️ All 6 From-Scratch Model Predictions on This Transaction:")
+        st.markdown("##### From-scratch diagnostic scores (uncalibrated):")
         model_rows = []
         for name, prob in sandbox_scores.items():
-            if prob >= block_thresh:
-                rec = "BLOCKED"
-            elif prob >= flag_thresh:
-                rec = "FLAGGED"
-            else:
-                rec = "APPROVED"
+            rec = sandbox_bundle.policy.decide(prob, stage=sandbox_bundle.stage)["action"]
             model_rows.append({
                 "Model Architecture": name,
-                "Probability": f"{prob:.2%}",
+                "Raw score": f"{prob:.4f}",
                 "Status": rec
             })
         st.table(pd.DataFrame(model_rows))
+        st.caption("Research scores share the displayed sandbox cutoffs for comparison; the selected model determines the recommendation above.")
 
     # XAI Feature Contributions
     st.markdown("---")
     st.subheader("🔍 Mathematical Root Cause Diagnosis (XAI Tornado Chart)")
-    st.info(f"💡 **Automated Risk Narrative:** {sandbox_xai['narrative']}")
+    st.info(f"💡 **Model explanation:** {sandbox_xai['narrative']}")
+    st.caption(f"Method: {sandbox_xai['attribution_method']}. Reference: training feature means; feature order follows the model schema. Contributions sum to score minus reference score.")
 
     impact_df = pd.DataFrame(sandbox_xai['all_impacts'][:10])
     if not impact_df.empty:
@@ -697,7 +729,7 @@ with tab_lab:
             orientation="h",
             color="direction",
             color_discrete_map={"Fraud Driver": "#EF4444", "Safety Indicator": "#10B981"},
-            labels={"impact": "Linear Risk Contribution (w_j * x_j)", y_axis_col: "Feature / Ledger Component"},
+            labels={"impact": "Change in selected model score", y_axis_col: "Feature / Ledger Component"},
             title="Top Feature Contributions toward / against Fraud"
         )
         fig_waterfall.update_layout(
@@ -715,6 +747,7 @@ with tab_lab:
 # ==============================================================================
 
 with tab_cost:
+    st.caption("Theoretical cost calculations assume calibrated probabilities and known costs. Use Measured Evaluation for validation-selected thresholds and untouched test results.")
     st.subheader("⚖️ Operational Cost Matrix & Global Financial Loss Optimizer ($\tau^*$)")
     st.markdown(
         "In enterprise payment networks, optimizing accuracy alone produces severe operational failure. "
@@ -797,6 +830,7 @@ with tab_cost:
 # ==============================================================================
 
 with tab_bench:
+    st.info("Legacy research benchmarks below use older sampling and model implementations. Current serving artifacts are evaluated in Measured Evaluation.")
     st.subheader("🔬 Head-to-Head Empirical Benchmark: From-Scratch NumPy vs. Scikit-Learn & XGBoost")
     st.markdown(
         "A rigorous empirical comparison evaluating pure NumPy algorithms against Scikit-Learn and XGBoost "
@@ -929,7 +963,8 @@ with tab_bench:
 # ==============================================================================
 
 with tab_kaggle:
-    st.subheader("📂 Real Kaggle European Cardholder Case Study Audit")
+    st.subheader("📂 Historical research cases")
+    st.caption("Legacy sample cases may have appeared during training. They are illustrative examples, not the new held-out evaluation. This tab uses the legacy scratch ensemble and its shared card policy.")
     st.markdown(
         "Audit actual historical credit card transactions directly from the benchmark dataset. "
         "Test whether the From-Scratch mathematical models correctly detect real fraudulent actors."
@@ -965,7 +1000,7 @@ with tab_kaggle:
             st.metric("Dataset Time Offset", f"{selected_case['time']:,.0f} seconds")
 
             p_ens = case_scores["Soft-Voting Ensemble (Scratch Champion)"]
-            if (p_ens >= 0.5 and selected_case['is_fraud'] == 1) or (p_ens < 0.5 and selected_case['is_fraud'] == 0):
+            if (p_ens >= legacy_bundle("card").policy.block_threshold and selected_case['is_fraud'] == 1) or (p_ens < legacy_bundle("card").policy.block_threshold and selected_case['is_fraud'] == 0):
                 st.success(f"🎯 **MODEL CORRECT!** Correctly classified with {p_ens:.1%} fraud probability.")
             else:
                 st.error(f"❌ **MISCLASSIFICATION**: Predicted {p_ens:.1%}")
@@ -977,8 +1012,8 @@ with tab_kaggle:
                 audit_table.append({
                     "Model": m_name,
                     "Predicted Risk": f"{score:.2%}",
-                    "Classification": "FRAUD" if score >= 0.5 else "GENUINE",
-                    "Status": "✅ HIT" if (score >= 0.5) == (selected_case['is_fraud'] == 1) else "❌ MISS"
+                    "Classification": "FRAUD" if score >= legacy_bundle("card").policy.block_threshold else "GENUINE",
+                    "Status": "✅ HIT" if (score >= legacy_bundle("card").policy.block_threshold) == (selected_case['is_fraud'] == 1) else "❌ MISS"
                 })
             st.dataframe(pd.DataFrame(audit_table), use_container_width=True)
 

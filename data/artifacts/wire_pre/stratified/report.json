@@ -1,0 +1,231 @@
+{
+  "profile": "wire_pre",
+  "protocol": "stratified",
+  "seed": 42,
+  "features": [
+    "amount",
+    "oldbalanceOrg",
+    "oldbalanceDest",
+    "balanceDrainRatio",
+    "isTransfer"
+  ],
+  "stage": "pre_transaction",
+  "source": {
+    "file": "paysim_natural.csv",
+    "sha256": "abec4802203535ce7d22168b642ded0bbd929827f90dd08360de4d8a2ce7d7c5",
+    "distribution": "see sampling manifest",
+    "manifest": {
+      "source_file": "PS_20174392719_1491204439457_log.csv",
+      "source_sha256": "16910f90577b0d981bf8ff289714510bb89bc71bff7d3f220f024e287e4eea6b",
+      "source_rows": 6362620,
+      "sample_rows": 250000,
+      "frauds": 308,
+      "prevalence": 0.001232,
+      "seed": 42,
+      "sampling": "uniform random priority sample, independent of label; all transaction types",
+      "history": "Sample is unsuitable for reconstructing complete account histories."
+    }
+  },
+  "cost_assumptions": {
+    "review_cost": 2.5,
+    "false_decline_cost": 5.0,
+    "loss_fraction": 1.0
+  },
+  "max_validation_alert_rate": 0.02,
+  "selection": "minimum validation expected loss within alert budget; Brier/log loss break ties",
+  "partition_summary": {
+    "train": {
+      "n": 137500,
+      "frauds": 169,
+      "prevalence": 0.001229090909090909,
+      "time_min": 1.0,
+      "time_max": 741.0
+    },
+    "calibration": {
+      "n": 37500,
+      "frauds": 46,
+      "prevalence": 0.0012266666666666667,
+      "time_min": 1.0,
+      "time_max": 718.0
+    },
+    "validation": {
+      "n": 37500,
+      "frauds": 47,
+      "prevalence": 0.0012533333333333333,
+      "time_min": 1.0,
+      "time_max": 730.0
+    },
+    "test": {
+      "n": 37500,
+      "frauds": 46,
+      "prevalence": 0.0012266666666666667,
+      "time_min": 1.0,
+      "time_max": 727.0
+    }
+  },
+  "model_name": "Sklearn Histogram Gradient Boosting",
+  "score_kind": "calibrated_probability",
+  "calibrated": true,
+  "policy": {
+    "flag_threshold": 0.006619640917666542,
+    "block_threshold": 0.006619640917666542,
+    "version": "validation-cost-policy-v1"
+  },
+  "runtime_versions": {
+    "python": "3.13.5",
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "scikit_learn": "1.9.1"
+  },
+  "model_fingerprint": "d7d04d374f9a9504f609561835de7092",
+  "limitations": [
+    "Cost assumptions are illustrative, not observed financial savings.",
+    "A single chronological holdout does not establish live performance.",
+    "Behavioural rules are evaluated separately from model-only metrics."
+  ],
+  "model_version": "eval-v2-a6552491c893f7e7",
+  "test": {
+    "n": 37500,
+    "frauds": 46,
+    "prevalence": 0.0012266666666666667,
+    "tp": 46,
+    "fp": 101,
+    "tn": 37353,
+    "fn": 0,
+    "precision": 0.3129251700680272,
+    "recall": 1.0,
+    "alerts_per_10000": 39.199999999999996,
+    "false_alerts_per_10000": 26.93333333333333,
+    "alert_rate": 0.00392,
+    "threshold": 0.006619640917666542,
+    "missed_fraud_amount": 0.0,
+    "review_cost": 367.5,
+    "false_decline_cost": 505.0,
+    "expected_loss": 872.5,
+    "expected_loss_per_10000": 232.66666666666669,
+    "roc_auc": 0.9997631877712021,
+    "average_precision": 0.8558763112033092,
+    "brier_score": 0.0003510175016786229,
+    "log_loss": 0.0012986233819817982
+  },
+  "test_reliability": [
+    {
+      "bin": 0,
+      "count": 37433,
+      "mean_score": 0.00011796806724800804,
+      "fraud_fraction": 0.00016028637832928166
+    },
+    {
+      "bin": 1,
+      "count": 18,
+      "mean_score": 0.15070941340435917,
+      "fraud_fraction": 0.1111111111111111
+    },
+    {
+      "bin": 2,
+      "count": 3,
+      "mean_score": 0.27413996674269503,
+      "fraud_fraction": 0.0
+    },
+    {
+      "bin": 3,
+      "count": 3,
+      "mean_score": 0.35343444465819635,
+      "fraud_fraction": 0.3333333333333333
+    },
+    {
+      "bin": 5,
+      "count": 1,
+      "mean_score": 0.5530894224085815,
+      "fraud_fraction": 0.0
+    },
+    {
+      "bin": 6,
+      "count": 5,
+      "mean_score": 0.628870466386785,
+      "fraud_fraction": 0.8
+    },
+    {
+      "bin": 7,
+      "count": 1,
+      "mean_score": 0.7300917667277166,
+      "fraud_fraction": 1.0
+    },
+    {
+      "bin": 8,
+      "count": 11,
+      "mean_score": 0.8509460916077253,
+      "fraud_fraction": 0.8181818181818182
+    },
+    {
+      "bin": 9,
+      "count": 25,
+      "mean_score": 0.9466543175066886,
+      "fraud_fraction": 0.92
+    }
+  ],
+  "test_raw_reliability": [
+    {
+      "bin": 0,
+      "count": 37431,
+      "mean_score": 0.00012651363861606598,
+      "fraud_fraction": 0.00016029494269455797
+    },
+    {
+      "bin": 1,
+      "count": 16,
+      "mean_score": 0.14577172774902386,
+      "fraud_fraction": 0.0625
+    },
+    {
+      "bin": 2,
+      "count": 6,
+      "mean_score": 0.23543667576959912,
+      "fraud_fraction": 0.16666666666666666
+    },
+    {
+      "bin": 3,
+      "count": 3,
+      "mean_score": 0.3430982814335149,
+      "fraud_fraction": 0.3333333333333333
+    },
+    {
+      "bin": 4,
+      "count": 1,
+      "mean_score": 0.4053301437891238,
+      "fraud_fraction": 0.0
+    },
+    {
+      "bin": 5,
+      "count": 1,
+      "mean_score": 0.5759702358133248,
+      "fraud_fraction": 0.0
+    },
+    {
+      "bin": 6,
+      "count": 5,
+      "mean_score": 0.6499645100359339,
+      "fraud_fraction": 0.8
+    },
+    {
+      "bin": 7,
+      "count": 1,
+      "mean_score": 0.7473822609284404,
+      "fraud_fraction": 1.0
+    },
+    {
+      "bin": 8,
+      "count": 11,
+      "mean_score": 0.8615277489211866,
+      "fraud_fraction": 0.8181818181818182
+    },
+    {
+      "bin": 9,
+      "count": 25,
+      "mean_score": 0.9505833362016388,
+      "fraud_fraction": 0.92
+    }
+  ],
+  "test_raw_brier": 0.00035161678011552,
+  "artifact_reload_verified": true
+}

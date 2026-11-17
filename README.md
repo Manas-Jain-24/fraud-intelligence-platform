@@ -12,7 +12,30 @@
 
 ---
 
-## 📌 Executive Overview
+## Local investigation workflow and realistic evaluation
+
+The post-submission app now includes a **persistent investigation queue**, causal transaction-history rules, a calibrated-model competition, and evaluation of the **exact saved serving artifacts**. The submitted notebooks and original research reports remain available below as historical work.
+
+- **Investigation Queue:** ingest a transaction, inspect history and model contributions, assign an analyst, record a reason and outcome, reopen a case, and export confirmed labels. Records persist in local SQLite.
+- **Measured Evaluation:** chronological and stratified holdouts at natural prevalence, with precision, recall, false alerts per 10,000, illustrative financial cost, and reliability plots.
+- **Three distinct profiles:** card scoring, post-transaction wire review, and pre-transfer wire scoring that excludes post-transaction balances.
+- **Consistent decisions and explanations:** API and dashboard share policy code; contributions decompose the actual selected model's score. Library models compete alongside the educational NumPy implementations.
+
+```bash
+python scripts/prepare_paysim_natural.py --input /path/to/original/PaySim.csv
+python scripts/evaluate_operations.py
+python -m streamlit run app.py
+# Optional API in a second terminal:
+python -m uvicorn api:app --port 8000
+```
+
+Use the full `data/creditcard.csv` for the card evaluation. The PaySim preparation takes a label-independent uniform sample of 250,000 original rows rather than retaining all frauds. Install `requirements_full.txt` first.
+
+The chronological card holdout currently has **65.5% precision, 73.1% recall, and 4.68 false alerts per 10,000 transactions**. Results, provenance, cost assumptions and model versions are in [the evaluation summary](data/artifacts/evaluation_summary.csv). These measurements apply to the new artifacts; older balanced benchmarks and simulation figures below describe different experiments.
+
+See [the operations guide](docs/OPERATIONS.md) for setup, API examples, model selection, calibration, feature availability and limitations. Deployment hardening and load testing remain deferred.
+
+## 📌 Executive Overview — original research
 
 **Fraud Intelligence Platform** is a dual-track, multi-rail machine learning research and financial risk operations platform evaluated across two distinct financial crime domains:
 1. **Card-Present POS Intelligence:** [ULB Machine Learning Group dataset](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud) (**284,807 European cardholder transactions, 492 fraud cases, 0.1727% extreme class asymmetry**).
@@ -160,26 +183,64 @@ All mathematical derivations are verified via unit tests in [`tests/`](tests/):
 
 ```bash
 fraud-intelligence-platform/
-├── app.py                             # Next-Gen Live Fraud Intelligence Dashboard (Streamlit)
-├── models_engine.py                   # Unified From-Scratch NumPy & Industry ML Engine (XAI & Inference)
-├── data_generator.py                  # Real-time streaming transaction generator with PCA fidelity
-├── requirements.txt                   # Core academic dependencies (NumPy, Pandas, Matplotlib)
-├── requirements_full.txt              # Full platform dependencies (Streamlit, Plotly, Scikit-Learn, XGBoost)
-├── .gitignore                         # Comprehensive Python/ML git ignore rules
+├── api.py                             # High-Throughput FastAPI REST Microservice (0.81ms SLA)
+├── app.py                             # Dual-Rail Fraud Operations Dashboard (Streamlit 1.66)
+├── models_engine.py                   # Pure NumPy Credit Card ML Engine (XAI & 7 Scratch Models)
+├── paysim_engine.py                   # Mobile Money & Wire Ledger Discrepancy Engine
+├── data_generator.py                  # Real-Time Streaming Transaction Generator (PCA-calibrated)
+├── Dockerfile                         # Multi-target Production Container (FastAPI + Streamlit)
+├── docker-compose.yml                 # Orchestration for API Gateway & Analytics Dashboard
+├── .dockerignore                      # Build context exclusion rules
+├── requirements.txt                   # Minimal academic dependencies (NumPy, Pandas, Matplotlib)
+├── requirements_full.txt              # Full enterprise stack (FastAPI, Streamlit, XGBoost, etc.)
+├── .gitignore                         # Git exclusion rules (large datasets, zips, logs)
 ├── LICENSE                            # MIT Open-Source License
+├── README.md                          # Primary project documentation
+├── SESSION_CONTEXT.md                 # Master context handoff & continuity document
 │
-├── data/                              # Data & Pre-computed Model Artifacts
-│   ├── model_weights.npz              # Pre-trained weights for all 6 Scratch algorithms & scalers
-│   ├── sample_cases.json              # 20 verified Kaggle test cases for interactive audit
-│   ├── live_transactions.csv          # Live simulator transaction buffer
-│   └── creditcard.csv                 # Kaggle Dataset (284,807 transactions, download from Kaggle)
+├── .github/workflows/                 # CI/CD Automation
+│   └── ci.yml                         # Multi-version matrix test (Python 3.11-3.13) & Docker build
 │
-├── tests/                             # Mathematical Unit Tests & Numerical Gradient Verification
-│   ├── run_tests.py                   # Standalone colored test runner
-│   ├── test_gradient_checking.py      # Finite-difference gradient tests (< 1e-5 relative error)
-│   ├── test_numerical_stability.py    # Logit overflow, extreme amounts & zero-variance guards
-│   ├── test_mathematical_invariants.py # He normal variance & loss monotonicity invariants
-│   └── README.md                      # Complete testing documentation
+├── data/                              # Datasets & Serialized Model Weights
+│   ├── creditcard.csv                 # Kaggle ULB Benchmark Dataset (284k transactions)
+│   ├── paysim_benchmark.csv           # PaySim Mobile Money Benchmark (100k transactions)
+│   ├── model_weights.npz              # Pre-trained weights for Credit Card NumPy models
+│   ├── paysim_weights.npz             # Pre-trained weights for PaySim Mobile Money models
+│   ├── sample_cases.json              # 20 verified Credit Card test cases for XAI audit
+│   ├── paysim_samples.json            # Curated wire transfer / account drain test cases
+│   └── live_transactions.csv          # Real-time transaction buffer for live ticker
+│
+├── tests/                             # Mathematical & Enterprise Test Suite (27 Pytests)
+│   ├── run_tests.py                   # Colored test runner with microsecond latency reports
+│   ├── test_api.py                    # FastAPI endpoint contracts, status codes & latency SLA
+│   ├── test_paysim_engine.py          # Mobile money ledger balance invariants & inference
+│   ├── test_gradient_checking.py      # Finite-difference analytical gradient checks (<1e-5 error)
+│   ├── test_numerical_stability.py    # Saturated logit overflow & zero-variance guards
+│   ├── test_mathematical_invariants.py# He normal variance & loss monotonicity invariants
+│   └── README.md                      # Complete testing documentation & execution guide
+│
+├── paysim_benchmark/                  # Cross-Domain Mobile Money Empirical Benchmark
+│   ├── benchmark_paysim.py            # Head-to-head evaluation runner (NumPy vs Sklearn vs XGBoost)
+│   ├── benchmark_results.csv          # Empirical metrics (ROC-AUC, PR-AUC, F1, Latency)
+│   ├── benchmark_comparison.png       # High-resolution benchmark comparison chart
+│   └── README.md                      # Comprehensive PaySim benchmark report & findings
+│
+├── benchmark_industry_vs_scratch/     # Credit Card Benchmark (NumPy vs. Sklearn & XGBoost)
+│   ├── run_benchmark.py               # Automated benchmarking pipeline across 6 model pairs
+│   ├── benchmark_head_to_head.ipynb   # Interactive comparison notebook
+│   ├── benchmark_results.csv          # Empirical metric results across all 6 models
+│   ├── figures/                       # Comparison bar charts, speed plots & ROC curves
+│   └── README.md                      # Full benchmark study report & resume bullet points
+│
+├── simulations/                       # 1,000-Run Monte Carlo Statistical Stability Suite
+│   ├── run_1000_simulations.py        # Multi-process 1,000-iteration runner across 12 CPU cores
+│   ├── run_100_simulations.py         # Rapid 100-run test runner (~1 minute)
+│   ├── run_paysim_simulation.py       # 50-run Monte Carlo simulation for PaySim mobile wire fraud
+│   ├── simulation_worker.py           # Isolated multiprocessing worker for parallel card evaluation
+│   ├── paysim_simulation_worker.py    # Isolated multiprocessing worker for PaySim evaluation
+│   ├── benchmark_1000_runs_summary.csv# Aggregated Mean, StdDev, CI95, and VaR summary
+│   ├── benchmark_1000_runs_raw.csv    # Complete 1,000-iteration raw metric dataset (892 KB)
+│   └── README.md                      # Detailed simulation methodology & metric glossary
 │
 ├── adversarial_security/              # Fintech Adversarial Evasion & Red-Teaming Suite
 │   ├── adversarial_engine.py          # FGSM perturbation & boundary search engine
@@ -188,25 +249,14 @@ fraud-intelligence-platform/
 │   ├── figures/                       # High-resolution adversarial robustness curves
 │   └── README.md                      # Threat model, security findings & resume bullets
 │
-├── benchmark_industry_vs_scratch/     # Head-to-Head Industry Benchmark (NumPy vs. Sklearn & XGBoost)
-│   ├── run_benchmark.py               # Automated benchmarking pipeline
-│   ├── benchmark_head_to_head.ipynb   # Interactive comparison notebook
-│   ├── benchmark_results.csv          # Raw empirical metric results across all 6 models
-│   ├── figures/                       # Visual comparisons (ROC curves, metrics, latency)
-│   └── README.md                      # Full benchmark study report & resume bullet points
+├── scripts/                           # Automation & Utility Scripts
+│   ├── generate_academic_repo.py      # Automated generator for clean academic submission repo
+│   └── prepare_paysim.py              # PaySim dataset curation and feature preprocessing
 │
-├── simulations/                       # 1,000-Run Monte Carlo Statistical Stability Suite
-│   ├── run_1000_simulations.py        # Multi-process 1,000-iteration runner across 12 CPU cores
-│   ├── run_100_simulations.py         # Rapid 100-run test runner (~1 minute)
-│   ├── simulation_worker.py           # Isolated worker process for parallel evaluation
-│   ├── benchmark_1000_runs_summary.csv # Aggregated Mean, StdDev, CI95, and VaR summary
-│   ├── benchmark_1000_runs_raw.csv    # Complete 1,000-iteration raw metric dataset (892 KB)
-│   └── README.md                      # Detailed simulation methodology & metric glossary
-│
-├── notebooks/                         # From-Scratch Jupyter Notebooks
+├── notebooks/                         # 14 From-Scratch Jupyter Research Notebooks
 │   ├── fraud_detection_master_capstone.ipynb # Master Capstone notebook unifying all 7 models
 │   ├── fraud_detection.ipynb          # Single baseline model notebook
-│   ├── fraud_detection_multimodel.ipynb # 4-model comparative notebook
+│   ├── fraud_detection_multimodel.ipynb# 4-model comparative notebook
 │   └── step1_... to step10_...        # 10 modular step-by-step notebooks (SMOTE, MLP, GBDT, etc.)
 │
 ├── report/                            # Research Reports, LaTeX & Generation Pipelines
@@ -214,11 +264,18 @@ fraud-intelligence-platform/
 │   ├── Statistical_Report_1000_Simulations.pdf # Standalone publication report (1,000 runs)
 │   ├── statistical_report_1000_simulations.md # Markdown edition with full tables & analogies
 │   ├── Credit_Card_Fraud_Detection_Comprehensive_Guide.pdf # 20-Page Research Monograph (PDF)
+│   ├── project_walkthrough_guide.md   # Step-by-step code and architectural walkthrough
 │   └── figures_statistical/           # 5 High-resolution publication figures
 │
-└── archive/                           # Archived prototypes & legacy simulator
-    ├── app.py                         # Synchronized backup dashboard
-    └── transaction_generator.py       # Legacy transaction generator
+├── rubrics/                           # Course Evaluation Rubrics
+│   ├── PDS_Project Rubrics.pdf        # Official course rubric document
+│   └── README.md                      # Course requirements & marking scheme breakdown
+│
+└── archive/                           # Archived Prototypes & Historical Artifacts
+    ├── README.md                      # Inventory of archived assets and active counterparts
+    ├── app.py                         # Legacy single-rail dashboard prototype
+    ├── transaction_generator.py       # Legacy transaction generator
+    └── README_LEGACY_CAPSTONE.md      # Previous iteration of project documentation
 ```
 
 ---

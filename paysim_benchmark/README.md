@@ -1,5 +1,7 @@
 # 📱 Cross-Domain Fraud Evaluation: PaySim Mobile Money Transfer
 
+> This historical benchmark retains all frauds in a 100,000-row enriched sample. Current evaluation instead uses a label-independent sample of the original data and distinguishes pre-transfer scoring from post-transaction ledger review. See [the operations guide](../docs/OPERATIONS.md) and [current summary](../data/artifacts/evaluation_summary.csv).
+
 ## 1. Domain Overview & Theoretical Motivation
 
 A critical test of any financial intelligence architecture is **cross-domain generalization**. Most academic fraud research focuses exclusively on Card-Present (POS) datasets such as the ULB European Credit Card dataset. However, modern financial crime increasingly targets **Real-Time Payment (RTP) and Mobile Money Transfer rails** (e.g., M-Pesa, UPI, FedNow, SEPA Instant).

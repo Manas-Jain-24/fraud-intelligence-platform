@@ -11,9 +11,10 @@ import random
 import uuid
 import numpy as np
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from models_engine import FraudIntelligenceEngine, engine
+from fraud_ops.service import ingest
 
 # Synthetic metadata categories
 COUNTRIES = [
@@ -90,7 +91,7 @@ class LiveTransactionGenerator:
             channel = random.choice([CHANNELS[0], CHANNELS[3], CHANNELS[4]])  # E-commerce, ATM, Wire
 
         tx_id = f"TX-{uuid.uuid4().hex[:8].upper()}"
-        timestamp = datetime.now()
+        timestamp = datetime.now(timezone.utc)
         card_type = random.choice(CARD_TYPES)
         device = random.choice(DEVICES)
 
@@ -99,29 +100,29 @@ class LiveTransactionGenerator:
         raw_x[:28] = v_vec
         raw_x[28] = amount
 
-        # Execute live inference via master engine
+        payload = {"amount": amount, "v_features": {f"V{i+1}": float(v_vec[i]) for i in range(28)}}
+        context = {"transaction_id": tx_id, "event_time": timestamp.isoformat(),
+                   "sender_id": f"DEMO-CARD-{random.randint(1, 12)}", "recipient_id": merchant_info[0], "synthetic": True}
+        record = ingest("card", payload, context)
+        assessment = record["assessment"]
         model_scores = engine.predict_all(raw_x)
-        champion_prob = model_scores["Soft-Voting Ensemble (Scratch Champion)"]
-
-        # Explainability
-        xai_report = engine.explain_transaction(raw_x)
-
-        # Decision Status based on champion risk score
-        if champion_prob >= 0.75:
-            status = "BLOCKED"
-            action_code = "HARD_DECLINE"
-            status_color = "#EF4444"
-        elif champion_prob >= 0.40:
-            status = "FLAGGED"
-            action_code = "STEP_UP_MFA"
-            status_color = "#F59E0B"
-        else:
-            status = "APPROVED"
-            action_code = "INSTANT_SETTLE"
-            status_color = "#10B981"
+        champion_prob = assessment["risk_score"]
+        xai_report = assessment["explanation"]
+        action = assessment["action"]
+        status = {"BLOCK": "BLOCKED", "REVIEW": "FLAGGED", "PASS": "APPROVED"}[action]
+        action_code = {"BLOCK": "SIMULATED_DECLINE", "REVIEW": "REVIEW_QUEUE", "PASS": "SIMULATED_PASS"}[action]
+        status_color = {"BLOCK": "#EF4444", "REVIEW": "#F59E0B", "PASS": "#10B981"}[action]
 
         return {
             "tx_id": tx_id,
+            "model_name": assessment["model_name"],
+            "model_version": assessment["model_version"],
+            "score_kind": assessment["score_kind"],
+            "synthetic": True,
+            "policy": assessment["policy"],
+            "sender_id": context["sender_id"],
+            "recipient_id": context["recipient_id"],
+            "behavioural_rules": record["behavioural_rules"],
             "timestamp": timestamp.strftime("%H:%M:%S.%f")[:-4],
             "datetime_obj": timestamp,
             "amount": amount,

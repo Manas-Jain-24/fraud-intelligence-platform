@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir -r requirements_full.txt
 
 # Copy application assets
 COPY api.py app.py models_engine.py paysim_engine.py data_generator.py ./
+COPY fraud_ops/ ./fraud_ops/
 COPY data/ ./data/
 COPY simulations/ ./simulations/
 COPY paysim_benchmark/ ./paysim_benchmark/

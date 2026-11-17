@@ -1,5 +1,7 @@
 # 🧪 Mathematical Gradient Verification & Numerical Stability Test Suite
 
+The suite also covers operational evaluation, score/explanation consistency, persistent investigation state, causal transaction histories and the real Streamlit workflow. Run `python -m pytest` from the repository root. Tests use temporary databases and never alter your investigation records. See [the operations guide](../docs/OPERATIONS.md).
+
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![Pytest](https://img.shields.io/badge/Tests-11%20Passed-brightgreen.svg)](https://pytest.org/)
 [![Zero Black-Box](https://img.shields.io/badge/Algorithms-100%25_From_Scratch-orange.svg)](https://numpy.org/)

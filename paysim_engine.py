@@ -13,6 +13,7 @@ import json
 import time
 import numpy as np
 import pandas as pd
+from fraud_ops.inference import ScratchInferenceMixin, WIRE_WEIGHTS, artifact_version
 from typing import Dict, Any, Tuple, List
 
 # Paths
@@ -205,11 +206,12 @@ class ScratchAnomalyDetector:
 # 2. MASTER MOBILE MONEY ENGINE
 # ==============================================================================
 
-class PaySimFraudEngine:
+class PaySimFraudEngine(ScratchInferenceMixin):
     """
     Dedicated Machine Learning Engine for PaySim Mobile Money Transfer Fraud.
     Analyzes ledger discrepancies, balance drains, and mule cash-outs.
     """
+    ENSEMBLE_WEIGHTS = WIRE_WEIGHTS
     FEATURE_NAMES = [
         "amount",
         "oldbalanceOrg",
@@ -388,6 +390,7 @@ class PaySimFraudEngine:
             self.train_and_save(output_file=weights_file)
             return
 
+        self.model_version = artifact_version(weights_file)
         data = np.load(weights_file, allow_pickle=True)
         self.scaler_mean = data['mean']
         self.scaler_std = data['std']
@@ -412,7 +415,8 @@ class PaySimFraudEngine:
         # 4. GBDT
         gbdt = ScratchStumpGBDT()
         gbdt.base_pred = float(data['gbdt_base'])
-        gbdt.stumps = [tuple(s) for s in data['gbdt_stumps']]
+        gbdt.stumps = [(int(s[0]), float(s[1]), float(s[2]), float(s[3])) for s in data['gbdt_stumps']]
+        gbdt.lr = float(data["gbdt_lr"]) if "gbdt_lr" in data else 0.15
         self.models["Gradient Boosted Trees (NumPy GBDT)"] = gbdt
 
         # 5. Anomaly Detector
@@ -435,95 +439,18 @@ class PaySimFraudEngine:
             x_raw = x_raw.reshape(1, -1)
         return (x_raw - self.scaler_mean) / self.scaler_std
 
-    def predict_all(self, x_raw: np.ndarray) -> Dict[str, float]:
-        """Runs inference across all scratch architectures in <1 millisecond."""
-        if not self.is_loaded:
-            self.load()
-
-        x_norm = self.scale_features(x_raw)
-        scores = {}
-
-        # 1. Baseline
-        scores["Baseline Logistic Regression (NumPy)"] = float(self.models["Baseline Logistic Regression (NumPy)"].predict_proba(x_norm)[0])
-        # 2. Cost-Sensitive
-        scores["Cost-Sensitive LogReg (NumPy)"] = float(self.models["Cost-Sensitive LogReg (NumPy)"].predict_proba(x_norm)[0])
-        # 3. MLP
-        scores["Multi-Layer Perceptron (NumPy MLP)"] = float(self.models["Multi-Layer Perceptron (NumPy MLP)"].predict_proba(x_norm)[0])
-        # 4. GBDT
-        scores["Gradient Boosted Trees (NumPy GBDT)"] = float(self.models["Gradient Boosted Trees (NumPy GBDT)"].predict_proba(x_norm)[0])
-        # 5. Anomaly Detector
-        scores["Unsupervised Isolation Profiler (NumPy)"] = float(self.models["Unsupervised Isolation Profiler (NumPy)"].anomaly_score(x_norm)[0])
-
-        # 6. Ensemble (Champion: MLP 0.35 + GBDT 0.35 + CostSensitive 0.20 + Anomaly 0.10)
-        p_ensemble = (
-            0.35 * scores["Multi-Layer Perceptron (NumPy MLP)"] +
-            0.35 * scores["Gradient Boosted Trees (NumPy GBDT)"] +
-            0.20 * scores["Cost-Sensitive LogReg (NumPy)"] +
-            0.10 * scores["Unsupervised Isolation Profiler (NumPy)"]
-        )
-        scores["Soft-Voting Ensemble (Scratch Champion)"] = float(np.clip(p_ensemble, 0.0, 1.0))
-
-        return scores
-
-    def explain_transaction(self, x_raw: np.ndarray) -> Dict[str, Any]:
-        """Computes exact ledger risk contributions and executive explanations."""
-        if not self.is_loaded:
-            self.load()
-
-        x_norm = self.scale_features(x_raw).ravel()
-        model = self.models["Cost-Sensitive LogReg (NumPy)"]
-        w = model.w
-        b = model.b
-
-        contributions = x_norm * w
-        feature_impacts = []
-        for feat_name, impact, val_raw in zip(self.FEATURE_NAMES, contributions, x_raw.ravel()):
-            feature_impacts.append({
-                "feature": feat_name,
-                "label": self.FEATURE_LABELS[feat_name],
-                "raw_value": float(val_raw),
-                "impact": float(impact),
-                "direction": "Fraud Driver" if impact > 0 else "Safety Indicator"
-            })
-
-        feature_impacts.sort(key=lambda x: abs(x['impact']), reverse=True)
-        top_drivers = [f for f in feature_impacts if f['impact'] > 0][:5]
-        top_safeties = [f for f in feature_impacts if f['impact'] < 0][:5]
-
-        # Narrative generation
-        narrative_parts = []
-        # Check specific ledger anomalies
-        amount_idx = self.FEATURE_NAMES.index("amount")
-        drain_idx = self.FEATURE_NAMES.index("balanceDrainRatio")
-        orig_err_idx = self.FEATURE_NAMES.index("errorBalanceOrig")
-        dest_err_idx = self.FEATURE_NAMES.index("errorBalanceDest")
-
-        drain_val = float(x_raw.ravel()[drain_idx])
-        orig_err = float(x_raw.ravel()[orig_err_idx])
-        dest_err = float(x_raw.ravel()[dest_err_idx])
-        amt = float(x_raw.ravel()[amount_idx])
-
-        if drain_val >= 0.95:
-            narrative_parts.append(f"Account Drain Alert: Transaction empties {drain_val*100:.1f}% of sender's entire account balance.")
-        if abs(orig_err) > 1.0:
-            narrative_parts.append(f"Origin Ledger Anomaly: Unaccounted balance discrepancy of ${abs(orig_err):,.2f} detected.")
-        if abs(dest_err) > 1.0:
-            narrative_parts.append(f"Destination Ghost Balance: Beneficiary wallet failed to reflect received credit of ${abs(dest_err):,.2f} (classic immediate mule cashout signature).")
-        if amt > 200000.0:
-            narrative_parts.append(f"High-Value Outlier: Transfer sum of ${amt:,.2f} exceeds nominal peer-to-peer distribution by >3 sigma.")
-
-        if not narrative_parts:
-            narrative = "Nominal transaction flow: Ledger balance equations fully balance with zero discrepancy and standard drain profile."
-        else:
-            narrative = " | ".join(narrative_parts)
-
-        return {
-            "top_drivers": top_drivers,
-            "top_safeties": top_safeties,
-            "all_impacts": feature_impacts,
-            "narrative": narrative,
-            "bias": float(b)
-        }
+    def explain_transaction(self, x_raw, model_name="Soft-Voting Ensemble (Scratch Champion)"):
+        result = super().explain_transaction(x_raw, model_name)
+        raw = np.asarray(x_raw).ravel()
+        observations = []
+        if raw[7] >= .95:
+            observations.append(f"Account Drain Alert: requested amount / (initial balance + 1) = {raw[7]:.2f}.")
+        if abs(raw[5]) > 1:
+            observations.append(f"Origin Ledger Anomaly: discrepancy {raw[5]:,.2f}.")
+        if abs(raw[6]) > 1:
+            observations.append(f"Destination Ghost Balance: ledger discrepancy {raw[6]:,.2f}; investigate settlement context.")
+        result["narrative"] = " ".join(observations + [result["narrative"]])
+        return result
 
 
 # Singleton engine instance

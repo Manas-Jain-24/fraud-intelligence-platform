@@ -1,0 +1,52 @@
+{
+  "model_version": "eval-v2-899ac20371f1591a",
+  "source_sha256": "abec4802203535ce7d22168b642ded0bbd929827f90dd08360de4d8a2ce7d7c5",
+  "replay_matches_report": true,
+  "test": {
+    "n": 38126,
+    "frauds": 163,
+    "prevalence": 0.004275297697109584,
+    "tp": 142,
+    "fp": 0,
+    "tn": 37963,
+    "fn": 21,
+    "precision": 1.0,
+    "recall": 0.8711656441717791,
+    "alerts_per_10000": 37.24492472328595,
+    "false_alerts_per_10000": 0.0,
+    "alert_rate": 0.0037244924723285945,
+    "threshold": 0.9960979960198537,
+    "missed_fraud_amount": 65322905.82,
+    "review_cost": 355.0,
+    "false_decline_cost": 0.0,
+    "expected_loss": 65323260.82,
+    "expected_loss_per_10000": 17133520.647327285,
+    "roc_auc": 0.9994770497395835,
+    "average_precision": 0.9845086253381565,
+    "brier_score": 0.00015740191919804688,
+    "log_loss": 0.0015110486702818616
+  },
+  "bootstrap_runs": 100,
+  "bootstrap_seed": 42,
+  "bootstrap_unit": "observed one-hour time blocks, with replacement",
+  "distinct_time_blocks": 246,
+  "limitation": "Conditional uncertainty for this fitted model and observed holdout; no new independent observations or training fits.",
+  "bootstrap_95_percentile_intervals": {
+    "precision": [
+      1.0,
+      1.0
+    ],
+    "recall": [
+      0.8348270440251573,
+      0.9183897669982286
+    ],
+    "false_alerts_per_10000": [
+      0.0,
+      0.0
+    ],
+    "expected_loss_per_10000": [
+      7247188.136930054,
+      35228547.60114375
+    ]
+  }
+}

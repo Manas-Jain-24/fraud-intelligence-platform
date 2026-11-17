@@ -1,6 +1,8 @@
 # 🔬 Head-to-Head Benchmark: From-Scratch (NumPy) vs. Industry Production Libraries (Scikit-Learn & XGBoost)
 ### *Empirical Evaluation on 284,807 Financial Transactions*
 
+> This is the historical balanced-sample experiment. Current model selection uses natural-prevalence chronological and stratified holdouts in `scripts/evaluate_operations.py`. See [the operations guide](../docs/OPERATIONS.md) and [current summary](../data/artifacts/evaluation_summary.csv).
+
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![Pure NumPy](https://img.shields.io/badge/Algorithms-100%25_From_Scratch-orange.svg)](https://numpy.org/)
 [![Scikit-Learn](https://img.shields.io/badge/Industry_Library-Scikit--Learn_1.9-F7931E.svg)](https://scikit-learn.org/)

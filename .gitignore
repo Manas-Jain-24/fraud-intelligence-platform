@@ -52,6 +52,29 @@ htmlcov/
 Thumbs.db
 ehthumbs.db
 
+# Archives & Large Bundles
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
 # Large Datasets & Local Buffers (Download from Kaggle)
 data/creditcard.csv
 *.log
+
+# Local operational data and reproducible model outputs
+data/paysim_natural.csv
+data/*.sqlite3
+data/*.sqlite3-*
+data/artifacts/**/*.joblib
+data/artifacts/**/active.json
+data/artifacts/**/split_membership.csv
+data/artifacts/**/test_predictions.csv
+data/artifacts/**/bootstrap_metrics.csv

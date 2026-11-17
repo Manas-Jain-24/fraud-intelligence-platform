@@ -1,0 +1,226 @@
+{
+  "profile": "card",
+  "protocol": "chronological",
+  "seed": 42,
+  "features": [
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+    "V7",
+    "V8",
+    "V9",
+    "V10",
+    "V11",
+    "V12",
+    "V13",
+    "V14",
+    "V15",
+    "V16",
+    "V17",
+    "V18",
+    "V19",
+    "V20",
+    "V21",
+    "V22",
+    "V23",
+    "V24",
+    "V25",
+    "V26",
+    "V27",
+    "V28",
+    "Amount"
+  ],
+  "stage": "pre_transaction",
+  "source": {
+    "file": "creditcard.csv",
+    "sha256": "76274b691b16a6c49d3f159c883398e03ccd6d1ee12d9d8ee38f4b4b98551a89",
+    "distribution": "original card dataset"
+  },
+  "cost_assumptions": {
+    "review_cost": 2.5,
+    "false_decline_cost": 5.0,
+    "loss_fraction": 1.0
+  },
+  "max_validation_alert_rate": 0.02,
+  "selection": "minimum validation expected loss within alert budget; Brier/log loss break ties",
+  "partition_summary": {
+    "train": {
+      "n": 156643,
+      "frauds": 350,
+      "prevalence": 0.002234380087204663,
+      "time_min": 0.0,
+      "time_max": 108570.0
+    },
+    "calibration": {
+      "n": 42721,
+      "frauds": 34,
+      "prevalence": 0.0007958615200955034,
+      "time_min": 108574.0,
+      "time_max": 132928.0
+    },
+    "validation": {
+      "n": 42719,
+      "frauds": 56,
+      "prevalence": 0.0013108921088976803,
+      "time_min": 132929.0,
+      "time_max": 151327.0
+    },
+    "test": {
+      "n": 42724,
+      "frauds": 52,
+      "prevalence": 0.0012171145023874169,
+      "time_min": 151328.0,
+      "time_max": 172792.0
+    }
+  },
+  "model_name": "Soft-Voting Ensemble (Scratch Champion)",
+  "score_kind": "calibrated_probability",
+  "calibrated": true,
+  "policy": {
+    "flag_threshold": 0.11157962251143479,
+    "block_threshold": 0.11157962251143479,
+    "version": "validation-cost-policy-v1"
+  },
+  "runtime_versions": {
+    "python": "3.13.5",
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "scikit_learn": "1.9.1"
+  },
+  "model_fingerprint": "99e30f9aa78301f5e8b969230e39aa1d",
+  "limitations": [
+    "Cost assumptions are illustrative, not observed financial savings.",
+    "A single chronological holdout does not establish live performance.",
+    "Behavioural rules are evaluated separately from model-only metrics."
+  ],
+  "model_version": "eval-v2-cbfdb88d56a60994",
+  "test": {
+    "n": 42724,
+    "frauds": 52,
+    "prevalence": 0.0012171145023874169,
+    "tp": 38,
+    "fp": 20,
+    "tn": 42652,
+    "fn": 14,
+    "precision": 0.6551724137931034,
+    "recall": 0.7307692307692307,
+    "alerts_per_10000": 13.575507911244266,
+    "false_alerts_per_10000": 4.681209624566988,
+    "alert_rate": 0.0013575507911244265,
+    "threshold": 0.11157962251143479,
+    "missed_fraud_amount": 2412.3,
+    "review_cost": 145.0,
+    "false_decline_cost": 100.0,
+    "expected_loss": 2657.3,
+    "expected_loss_per_10000": 621.968916768093,
+    "roc_auc": 0.9695400154307634,
+    "average_precision": 0.6486648585698743,
+    "brier_score": 0.0007193614479560906,
+    "log_loss": 0.003696447434597323
+  },
+  "test_reliability": [
+    {
+      "bin": 0,
+      "count": 42665,
+      "mean_score": 0.0003658411344815114,
+      "fraud_fraction": 0.00030469940232040314
+    },
+    {
+      "bin": 1,
+      "count": 13,
+      "mean_score": 0.14848973614819314,
+      "fraud_fraction": 0.46153846153846156
+    },
+    {
+      "bin": 2,
+      "count": 13,
+      "mean_score": 0.23979663558669506,
+      "fraud_fraction": 0.46153846153846156
+    },
+    {
+      "bin": 3,
+      "count": 13,
+      "mean_score": 0.34166046437164305,
+      "fraud_fraction": 0.6153846153846154
+    },
+    {
+      "bin": 4,
+      "count": 13,
+      "mean_score": 0.4570762937767964,
+      "fraud_fraction": 1.0
+    },
+    {
+      "bin": 5,
+      "count": 6,
+      "mean_score": 0.5366192897634267,
+      "fraud_fraction": 1.0
+    },
+    {
+      "bin": 6,
+      "count": 1,
+      "mean_score": 0.6994110875120736,
+      "fraud_fraction": 0.0
+    }
+  ],
+  "test_raw_reliability": [
+    {
+      "bin": 1,
+      "count": 22013,
+      "mean_score": 0.15754940844607043,
+      "fraud_fraction": 0.0
+    },
+    {
+      "bin": 2,
+      "count": 10596,
+      "mean_score": 0.24122663947536793,
+      "fraud_fraction": 0.00028312570781426955
+    },
+    {
+      "bin": 3,
+      "count": 4645,
+      "mean_score": 0.3389857979438394,
+      "fraud_fraction": 0.0
+    },
+    {
+      "bin": 4,
+      "count": 2557,
+      "mean_score": 0.44630347828315015,
+      "fraud_fraction": 0.001564333202972233
+    },
+    {
+      "bin": 5,
+      "count": 1719,
+      "mean_score": 0.5412856302163691,
+      "fraud_fraction": 0.0011634671320535194
+    },
+    {
+      "bin": 6,
+      "count": 814,
+      "mean_score": 0.6471151056330644,
+      "fraud_fraction": 0.002457002457002457
+    },
+    {
+      "bin": 7,
+      "count": 294,
+      "mean_score": 0.7366967091008653,
+      "fraud_fraction": 0.006802721088435374
+    },
+    {
+      "bin": 8,
+      "count": 63,
+      "mean_score": 0.8475771236797298,
+      "fraud_fraction": 0.2698412698412698
+    },
+    {
+      "bin": 9,
+      "count": 23,
+      "mean_score": 0.9104626012994465,
+      "fraud_fraction": 0.9565217391304348
+    }
+  ],
+  "test_raw_brier": 0.07653394030405783,
+  "artifact_reload_verified": true
+}

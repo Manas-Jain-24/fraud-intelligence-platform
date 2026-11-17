@@ -1,12 +1,12 @@
 """
 api.py
 ======
-Production-Grade High-Throughput REST Microservice for Real-Time Fraud Intelligence.
-Provides sub-millisecond inference and explainability across dual payment rails:
+Local scoring and investigation API for the fraud research project.
+Provides evaluated inference and explanations across payment profiles:
   1. Credit Card Rail (ULB European Cardholders)
   2. Mobile Money / Wire Transfer Rail (PaySim Mobile Ledger Discrepancies)
 
-Powered by Pure NumPy mathematical engines with zero heavyweight runtime dependencies.
+Supports saved NumPy engines and locally evaluated scikit-learn candidates.
 Author: Manas Jain <manasj1234567890@gmail.com>
 """
 
@@ -15,6 +15,7 @@ import sys
 import time
 from typing import Dict, Any, List, Optional, Literal
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request, Response, status
@@ -24,6 +25,10 @@ from pydantic import BaseModel, Field, field_validator
 # Import Model Engines
 from models_engine import FraudIntelligenceEngine
 from paysim_engine import PaySimFraudEngine, paysim_engine
+from fraud_ops.artifacts import get_bundle
+from fraud_ops.inference import BASELINE, COST, MLP, GBDT, ANOMALY, ENSEMBLE
+from fraud_ops.service import assess, ingest
+from fraud_ops.store import InvestigationStore, ConflictError
 
 # Start time for uptime calculation
 START_TIME = time.time()
@@ -130,12 +135,12 @@ class LedgerDiscrepancies(BaseModel):
     """Engineered ledger balance reconciliation anomalies."""
     errorBalanceOrig: float = Field(..., description="Origin balance discrepancy: newbalanceOrig + amount - oldbalanceOrg")
     errorBalanceDest: float = Field(..., description="Destination balance discrepancy: oldbalanceDest + amount - newbalanceDest")
-    balanceDrainRatio: float = Field(..., description="Fraction of origin account drained: amount / oldbalanceOrg (clipped [0, 1])")
+    balanceDrainRatio: float = Field(..., description="Engine feature: amount / (oldbalanceOrg + 1), without clipping")
     isTransfer: bool = Field(..., description="Flag indicating high-risk P2P TRANSFER flow")
 
 
 class ModelScoreBreakdown(BaseModel):
-    """Probabilities across all individual scratch architectures."""
+    """Uncalibrated scratch diagnostics, separate from the active model's score."""
     baseline_logistic_regression: float
     cost_sensitive_logistic_regression: float
     multilayer_perceptron_neural_net: float
@@ -154,6 +159,17 @@ class ScoringResponse(BaseModel):
     latency_microseconds: float
     model_breakdown: ModelScoreBreakdown
     ledger_anomalies: Optional[LedgerDiscrepancies] = None
+    action: str
+    flag_threshold: float
+    policy_version: str
+    model_name: str
+    model_version: str
+    score_kind: str
+    assessment_stage: str
+    policy: Dict[str, Any]
+    evaluation_status: Optional[str] = None
+    diagnostic_model_version: str
+    model_breakdown_score_kind: str = "uncalibrated_score"
 
 
 class FeatureImpact(BaseModel):
@@ -172,6 +188,23 @@ class ExplainabilityResponse(BaseModel):
     narrative: str
     top_fraud_drivers: List[FeatureImpact]
     top_safety_indicators: List[FeatureImpact]
+    model_name: str
+    model_version: str
+    explained_model: str
+    explained_score: float
+    baseline_score: float
+    threshold_applied: float
+    flag_threshold: float
+    action: str
+    risk_level: str
+    score_kind: str
+    assessment_stage: str
+    policy_version: str
+    attribution_method: str
+    impact_units: str
+    feature_order: List[str]
+    reference: List[float]
+    all_impacts: List[FeatureImpact]
 
 
 class ModelMetadata(BaseModel):
@@ -210,10 +243,15 @@ async def root():
             "models": "/v1/models",
             "score_card": "POST /v1/score/card",
             "score_wire": "POST /v1/score/wire",
+            "score_wire_pre": "POST /v1/score/wire/pre",
             "explain_card": "POST /v1/explain/card",
             "explain_wire": "POST /v1/explain/wire",
             "samples_card": "/v1/samples/card",
-            "samples_wire": "/v1/samples/wire"
+            "samples_wire": "/v1/samples/wire",
+            "ingest": "POST /v1/transactions",
+            "cases": "GET /v1/cases",
+            "case_action": "PATCH /v1/cases/{case_id}",
+            "feedback": "GET /v1/feedback"
         }
     }
 
@@ -236,269 +274,178 @@ async def health_check():
     )
 
 
-@app.get("/v1/models", response_model=List[ModelMetadata], tags=["Model Registry"])
+@app.get("/v1/models", tags=["Model Registry"])
 async def list_registered_models():
-    """Lists registered model architectures, latencies, and benchmark metrics."""
-    return [
-        ModelMetadata(
-            name="Soft-Voting Ensemble (Champion)",
-            type="Deep Learning",
-            rail="Both (Credit Card & Mobile Money)",
-            inference_latency_us=65.0,
-            roc_auc=0.9808,
-            mathematical_foundation="Simplex-constrained soft-voting convex combination over diverse hypothesis spaces."
-        ),
-        ModelMetadata(
-            name="Cost-Sensitive Logistic Regression",
-            type="Cost-Sensitive",
-            rail="Both (Credit Card & Mobile Money)",
-            inference_latency_us=6.6,
-            roc_auc=0.9519,
-            mathematical_foundation="Asymmetric cross-entropy loss with 5x penalty on false-negative loss vectors."
-        ),
-        ModelMetadata(
-            name="Multi-Layer Perceptron (Scratch MLP)",
-            type="Deep Learning",
-            rail="Both (Credit Card & Mobile Money)",
-            inference_latency_us=42.0,
-            roc_auc=0.9634,
-            mathematical_foundation="3-layer neural network with He Normal variance scaling and ReLU activations."
-        ),
-        ModelMetadata(
-            name="Gradient Boosted Decision Stumps (Scratch GBDT)",
-            type="Ensemble GBDT",
-            rail="Both (Credit Card & Mobile Money)",
-            inference_latency_us=85.0,
-            roc_auc=0.9610,
-            mathematical_foundation="Greedy functional gradient descent on pseudo-residuals using depth-1 stumps."
-        ),
-        ModelMetadata(
-            name="Unsupervised Isolation Profiler",
-            type="Unsupervised",
-            rail="Both (Credit Card & Mobile Money)",
-            inference_latency_us=12.0,
-            roc_auc=0.8845,
-            mathematical_foundation="Standardized Euclidean centroid distance projection with Sigmoid probability mapping."
-        ),
-    ]
+    """Artifact-specific measurements; legacy scratch scores remain available for research."""
+    entries = []
+    for profile in ("card", "wire", "wire_pre"):
+        try:
+            bundle = get_bundle(profile)
+        except FileNotFoundError:
+            continue
+        entries.append({"name": bundle.model_name, "rail": profile, "active": True,
+                        "model_version": bundle.version, "score_kind": bundle.score_kind,
+                        "assessment_stage": bundle.stage, "policy": bundle.policy.to_dict(),
+                        "evaluation": bundle.metadata})
+    for name in (BASELINE, COST, MLP, GBDT, ANOMALY, ENSEMBLE):
+        entries.append({"name": name, "rail": "card and wire", "active": False,
+                        "purpose": "Uncalibrated research diagnostics; active model is identified above"})
+    return entries
+
+
+def _score(profile, payload, threshold=None):
+    if (card_engine if profile == "card" else wire_engine) is None:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+    values = payload.model_dump()
+    try:
+        result = assess(profile, values, threshold)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    from fraud_ops.artifacts import feature_vector
+    diagnostic_engine = card_engine if profile == "card" else wire_engine
+    result["diagnostic_model_version"] = diagnostic_engine.model_version
+    scores = diagnostic_engine.predict_all(feature_vector(profile, values))
+    result["model_breakdown"] = ModelScoreBreakdown(
+        baseline_logistic_regression=scores[BASELINE], cost_sensitive_logistic_regression=scores[COST],
+        multilayer_perceptron_neural_net=scores[MLP], gradient_boosted_decision_trees=scores[GBDT],
+        unsupervised_isolation_profiler=scores[ANOMALY], champion_soft_voting_ensemble=scores[ENSEMBLE])
+    if profile == "wire":
+        raw = feature_vector(profile, values)
+        result["ledger_anomalies"] = LedgerDiscrepancies(errorBalanceOrig=raw[5], errorBalanceDest=raw[6],
+            balanceDrainRatio=raw[7], isTransfer=bool(raw[8]))
+    return result
 
 
 @app.post("/v1/score/card", response_model=ScoringResponse, tags=["Inference"])
-async def score_credit_card(payload: CreditCardFeatures, threshold: float = 0.50):
-    """
-    Sub-millisecond inference for Credit Card transactions (ULB Rail).
-    Accepts 28 PCA features and transaction amount.
-    """
-    if card_engine is None or not card_engine.is_loaded:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Card engine not initialized")
-
-    start_us = time.perf_counter()
-
-    # Construct input vector in deterministic order [V1..V28, Amount]
-    features_list = [payload.v_features.get(f"V{i}", 0.0) for i in range(1, 29)] + [payload.amount]
-    x_raw = np.array(features_list, dtype=np.float64)
-
-    scores = card_engine.predict_all(x_raw)
-    p_champion = scores["Soft-Voting Ensemble (Scratch Champion)"]
-
-    latency_us = (time.perf_counter() - start_us) * 1_000_000.0
-
-    # Risk level classification
-    if p_champion >= 0.85:
-        risk_level = "CRITICAL"
-    elif p_champion >= threshold:
-        risk_level = "HIGH"
-    elif p_champion >= 0.20:
-        risk_level = "MEDIUM"
-    else:
-        risk_level = "LOW"
-
-    breakdown = ModelScoreBreakdown(
-        baseline_logistic_regression=round(scores["Baseline Logistic Regression (NumPy)"], 4),
-        cost_sensitive_logistic_regression=round(scores["Cost-Sensitive LogReg (NumPy)"], 4),
-        multilayer_perceptron_neural_net=round(scores["Multi-Layer Perceptron (NumPy MLP)"], 4),
-        gradient_boosted_decision_trees=round(scores["Gradient Boosted Trees (NumPy GBDT)"], 4),
-        unsupervised_isolation_profiler=round(scores["Unsupervised Isolation Profiler (NumPy)"], 4),
-        champion_soft_voting_ensemble=round(p_champion, 4)
-    )
-
-    return ScoringResponse(
-        rail="Credit Card (ULB European)",
-        is_fraud=(p_champion >= threshold),
-        risk_score=round(p_champion, 4),
-        risk_level=risk_level,
-        threshold_applied=threshold,
-        latency_microseconds=round(latency_us, 1),
-        model_breakdown=breakdown,
-        ledger_anomalies=None
-    )
+async def score_credit_card(payload: CreditCardFeatures, threshold: Optional[float] = None):
+    return _score("card", payload, threshold)
 
 
 @app.post("/v1/score/wire", response_model=ScoringResponse, tags=["Inference"])
-async def score_wire_transfer(payload: WireTransferRequest, threshold: float = 0.75):
-    """
-    Sub-millisecond inference for Mobile Money & Wire Transfers (PaySim Rail).
-    Dynamically extracts ledger discrepancies, account drain ratios, and mule patterns.
-    Calibrated against production operational threshold (default block threshold tau_2 = 0.75).
-    """
-    if wire_engine is None or not wire_engine.is_loaded:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Wire engine not initialized")
+async def score_wire_transfer(payload: WireTransferRequest, threshold: Optional[float] = None):
+    """Post-transaction assessment: uses observed settlement balances; action is REVIEW or PASS."""
+    return _score("wire", payload, threshold)
 
-    start_us = time.perf_counter()
 
-    # Compute ledger features
-    x_raw = wire_engine.compute_features(
-        amount=payload.amount,
-        oldbalanceOrg=payload.oldbalanceOrg,
-        newbalanceOrig=payload.newbalanceOrig,
-        oldbalanceDest=payload.oldbalanceDest,
-        newbalanceDest=payload.newbalanceDest,
-        tx_type=payload.type
-    )
-
-    scores = wire_engine.predict_all(x_raw)
-    p_champion = scores["Soft-Voting Ensemble (Scratch Champion)"]
-
-    latency_us = (time.perf_counter() - start_us) * 1_000_000.0
-
-    if p_champion >= 0.85:
-        risk_level = "CRITICAL"
-    elif p_champion >= threshold:
-        risk_level = "HIGH"
-    elif p_champion >= 0.40:
-        risk_level = "MEDIUM"
-    else:
-        risk_level = "LOW"
-
-    breakdown = ModelScoreBreakdown(
-        baseline_logistic_regression=round(scores["Baseline Logistic Regression (NumPy)"], 4),
-        cost_sensitive_logistic_regression=round(scores["Cost-Sensitive LogReg (NumPy)"], 4),
-        multilayer_perceptron_neural_net=round(scores["Multi-Layer Perceptron (NumPy MLP)"], 4),
-        gradient_boosted_decision_trees=round(scores["Gradient Boosted Trees (NumPy GBDT)"], 4),
-        unsupervised_isolation_profiler=round(scores["Unsupervised Isolation Profiler (NumPy)"], 4),
-        champion_soft_voting_ensemble=round(p_champion, 4)
-    )
-
-    # Discrepancy details
-    orig_err = payload.newbalanceOrig + payload.amount - payload.oldbalanceOrg
-    dest_err = payload.oldbalanceDest + payload.amount - payload.newbalanceDest
-    drain = payload.amount / payload.oldbalanceOrg if payload.oldbalanceOrg > 0 else (1.0 if payload.amount > 0 else 0.0)
-
-    ledger_info = LedgerDiscrepancies(
-        errorBalanceOrig=round(orig_err, 2),
-        errorBalanceDest=round(dest_err, 2),
-        balanceDrainRatio=round(float(np.clip(drain, 0.0, 1.0)), 4),
-        isTransfer=(payload.type == "TRANSFER")
-    )
-
-    return ScoringResponse(
-        rail="Mobile Money / Wire Transfer (PaySim)",
-        is_fraud=(p_champion >= threshold),
-        risk_score=round(p_champion, 4),
-        risk_level=risk_level,
-        threshold_applied=threshold,
-        latency_microseconds=round(latency_us, 1),
-        model_breakdown=breakdown,
-        ledger_anomalies=ledger_info
-    )
+def _explain(profile, payload, threshold=None):
+    try:
+        result = assess(profile, payload.model_dump(), threshold, explain=True)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    explanation = result.pop("explanation")
+    return {**result, **explanation, "top_fraud_drivers": explanation["top_drivers"],
+            "top_safety_indicators": explanation["top_safeties"]}
 
 
 @app.post("/v1/explain/card", response_model=ExplainabilityResponse, tags=["Explainability"])
-async def explain_credit_card(payload: CreditCardFeatures):
-    """Computes exact linear and non-linear feature attribution for a card transaction."""
-    if card_engine is None or not card_engine.is_loaded:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Card engine not initialized")
-
-    features_list = [payload.v_features.get(f"V{i}", 0.0) for i in range(1, 29)] + [payload.amount]
-    x_raw = np.array(features_list, dtype=np.float64)
-
-    scores = card_engine.predict_all(x_raw)
-    p_champion = scores["Soft-Voting Ensemble (Scratch Champion)"]
-
-    xai = card_engine.explain_transaction(x_raw)
-
-    drivers = [
-        FeatureImpact(
-            feature=d["feature"],
-            label=f"PCA Component {d['feature']}" if d["feature"].startswith("V") else "Transaction Amount",
-            raw_value=round(d["raw_value"], 4),
-            impact=round(d["impact"], 4),
-            direction="Fraud Driver"
-        )
-        for d in xai["top_drivers"]
-    ]
-
-    safeties = [
-        FeatureImpact(
-            feature=s["feature"],
-            label=f"PCA Component {s['feature']}" if s["feature"].startswith("V") else "Transaction Amount",
-            raw_value=round(s["raw_value"], 4),
-            impact=round(s["impact"], 4),
-            direction="Safety Indicator"
-        )
-        for s in xai["top_safeties"]
-    ]
-
-    return ExplainabilityResponse(
-        rail="Credit Card (ULB European)",
-        risk_score=round(p_champion, 4),
-        is_fraud=(p_champion >= 0.50),
-        narrative=xai["narrative"],
-        top_fraud_drivers=drivers,
-        top_safety_indicators=safeties
-    )
+async def explain_credit_card(payload: CreditCardFeatures, threshold: Optional[float] = None):
+    return _explain("card", payload, threshold)
 
 
 @app.post("/v1/explain/wire", response_model=ExplainabilityResponse, tags=["Explainability"])
-async def explain_wire_transfer(payload: WireTransferRequest):
-    """Computes exact ledger attribution and diagnostic forensic narratives for a wire transfer."""
-    if wire_engine is None or not wire_engine.is_loaded:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Wire engine not initialized")
+async def explain_wire_transfer(payload: WireTransferRequest, threshold: Optional[float] = None):
+    return _explain("wire", payload, threshold)
 
-    x_raw = wire_engine.compute_features(
-        amount=payload.amount,
-        oldbalanceOrg=payload.oldbalanceOrg,
-        newbalanceOrig=payload.newbalanceOrig,
-        oldbalanceDest=payload.oldbalanceDest,
-        newbalanceDest=payload.newbalanceDest,
-        tx_type=payload.type
-    )
 
-    scores = wire_engine.predict_all(x_raw)
-    p_champion = scores["Soft-Voting Ensemble (Scratch Champion)"]
+class WirePreRequest(BaseModel):
+    type: Literal["TRANSFER", "CASH_OUT", "PAYMENT", "DEBIT", "CASH_IN"]
+    amount: float = Field(..., gt=0)
+    oldbalanceOrg: float = Field(..., ge=0)
+    oldbalanceDest: float = Field(..., ge=0)
 
-    xai = wire_engine.explain_transaction(x_raw)
 
-    drivers = [
-        FeatureImpact(
-            feature=d["feature"],
-            label=d["label"],
-            raw_value=round(d["raw_value"], 4),
-            impact=round(d["impact"], 4),
-            direction="Fraud Driver"
-        )
-        for d in xai["top_drivers"]
-    ]
+@app.post("/v1/score/wire/pre", tags=["Inference"])
+async def score_wire_pre(payload: WirePreRequest, threshold: Optional[float] = None):
+    """Uses only pre-transaction fields; never substitutes zero for an unknown post balance."""
+    try:
+        return assess("wire_pre", payload.model_dump(), threshold, explain=True)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
-    safeties = [
-        FeatureImpact(
-            feature=s["feature"],
-            label=s["label"],
-            raw_value=round(s["raw_value"], 4),
-            impact=round(s["impact"], 4),
-            direction="Safety Indicator"
-        )
-        for s in xai["top_safeties"]
-    ]
 
-    return ExplainabilityResponse(
-        rail="Mobile Money / Wire Transfer (PaySim)",
-        risk_score=round(p_champion, 4),
-        is_fraud=(p_champion >= 0.50),
-        narrative=xai["narrative"],
-        top_fraud_drivers=drivers,
-        top_safety_indicators=safeties
-    )
+class TransactionContext(BaseModel):
+    transaction_id: str = Field(..., min_length=1)
+    event_time: datetime
+    sender_id: Optional[str] = None
+    recipient_id: Optional[str] = None
+    synthetic: bool = False
+
+
+class TransactionSubmission(BaseModel):
+    profile: Literal["card", "wire", "wire_pre"]
+    payload: Dict[str, Any]
+    context: TransactionContext
+    force_case: bool = False
+
+
+@app.post("/v1/transactions", tags=["Investigations"])
+async def ingest_transaction(submission: TransactionSubmission):
+    from pydantic import ValidationError
+    schema = {"card": CreditCardFeatures, "wire": WireTransferRequest, "wire_pre": WirePreRequest}[submission.profile]
+    try:
+        payload = schema.model_validate(submission.payload).model_dump()
+        context = submission.context.model_dump(mode="json")
+        return ingest(submission.profile, payload, context, force_case=submission.force_case)
+    except ConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except (ValueError, ValidationError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+
+@app.get("/v1/transactions", tags=["Investigations"])
+async def list_transactions(sender_id: Optional[str] = None, recipient_id: Optional[str] = None, limit: int = 100):
+    return InvestigationStore().list_transactions(limit, sender_id, recipient_id)
+
+
+@app.get("/v1/transactions/{transaction_id}", tags=["Investigations"])
+async def get_transaction(transaction_id: str):
+    try:
+        return InvestigationStore().get_transaction(transaction_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get("/v1/cases", tags=["Investigations"])
+async def list_cases(status: Optional[str] = None, assignee: Optional[str] = None, synthetic: Optional[bool] = None):
+    return InvestigationStore().list_cases(status, assignee, synthetic)
+
+
+@app.get("/v1/cases/{case_id}", tags=["Investigations"])
+async def get_case(case_id: int):
+    try:
+        return InvestigationStore().get_case(case_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+class CaseUpdate(BaseModel):
+    action: Literal["ASSIGN", "RESOLVE", "REOPEN", "NOTE"]
+    actor: str
+    expected_version: int
+    assignee: Optional[str] = None
+    decision: Optional[Literal["CONFIRMED_FRAUD", "LEGITIMATE", "INCONCLUSIVE"]] = None
+    reason: Optional[str] = None
+
+
+@app.patch("/v1/cases/{case_id}", tags=["Investigations"])
+async def update_case(case_id: int, update: CaseUpdate):
+    try:
+        return InvestigationStore().update_case(case_id, **update.model_dump())
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/v1/feedback", tags=["Investigations"])
+async def investigator_feedback(include_synthetic: bool = False):
+    return InvestigationStore().feedback_rows(include_synthetic)
 
 
 @app.get("/v1/samples/card", tags=["Samples"])

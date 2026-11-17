@@ -1,5 +1,7 @@
 # Monte Carlo Statistical Stability & Value-at-Risk Simulation Suite
 
+> **Current serving validation:** use `python simulations/replay_served_artifact.py --profile card` (or `wire`, `wire_pre`). It replays the untouched test partition through the exact selected artifact and optionally bootstraps hourly blocks. The original refitting experiments below use different implementations and overlapping observations; their metrics do not directly validate the current serving model. See [the operations guide](../docs/OPERATIONS.md).
+
 This directory contains the large-scale Monte Carlo resampling framework developed to evaluate the statistical stability, variance, and financial tail-risk of all **7 from-scratch fraud detection models** across $N = 1,000$ independent pseudo-random train/test partitions.
 
 ---

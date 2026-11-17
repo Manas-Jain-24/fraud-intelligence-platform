@@ -1,0 +1,11 @@
+{
+  "source_file": "PS_20174392719_1491204439457_log.csv",
+  "source_sha256": "16910f90577b0d981bf8ff289714510bb89bc71bff7d3f220f024e287e4eea6b",
+  "source_rows": 6362620,
+  "sample_rows": 250000,
+  "frauds": 308,
+  "prevalence": 0.001232,
+  "seed": 42,
+  "sampling": "uniform random priority sample, independent of label; all transaction types",
+  "history": "Sample is unsuitable for reconstructing complete account histories."
+}

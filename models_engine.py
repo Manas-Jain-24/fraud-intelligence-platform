@@ -10,6 +10,7 @@ import os
 import time
 import numpy as np
 import pandas as pd
+from fraud_ops.inference import ScratchInferenceMixin, CARD_WEIGHTS, artifact_version
 from typing import Dict, Any, Tuple, List
 
 # Paths
@@ -206,11 +207,12 @@ class ScratchAnomalyDetector:
 # 2. MASTER ENGINE WRAPPER
 # ==============================================================================
 
-class FraudIntelligenceEngine:
+class FraudIntelligenceEngine(ScratchInferenceMixin):
     """
     Production-grade inference and explainability engine.
     Loads and runs all from-scratch and industry models in sub-milliseconds.
     """
+    ENSEMBLE_WEIGHTS = CARD_WEIGHTS
     FEATURE_NAMES = [f"V{i}" for i in range(1, 29)] + ["Amount"]
 
     def __init__(self):
@@ -310,6 +312,7 @@ class FraudIntelligenceEngine:
             self.train_and_save(output_file=weights_file)
             return
 
+        self.model_version = artifact_version(weights_file)
         data = np.load(weights_file)
         self.scaler_mean = data['mean']
         self.scaler_std = data['std']
@@ -361,93 +364,6 @@ class FraudIntelligenceEngine:
             return (x_raw - self.scaler_mean) / self.scaler_std
         return (x_raw - self.scaler_mean) / self.scaler_std
 
-    def predict_all(self, x_raw: np.ndarray) -> Dict[str, float]:
-        """Runs inference across all models and returns fraud probabilities."""
-        if not self.is_loaded:
-            self.load()
-
-        x_norm = self.scale_features(x_raw)
-        if x_norm.ndim == 1:
-            x_norm = x_norm.reshape(1, -1)
-
-        scores = {}
-        # 1. Baseline LogReg
-        scores["Baseline Logistic Regression (NumPy)"] = float(self.models["Baseline Logistic Regression (NumPy)"].predict_proba(x_norm)[0])
-        # 2. Cost-Sensitive LogReg
-        scores["Cost-Sensitive LogReg (NumPy)"] = float(self.models["Cost-Sensitive LogReg (NumPy)"].predict_proba(x_norm)[0])
-        # 3. MLP
-        scores["Multi-Layer Perceptron (NumPy MLP)"] = float(self.models["Multi-Layer Perceptron (NumPy MLP)"].predict_proba(x_norm)[0])
-        # 4. GBDT
-        scores["Gradient Boosted Trees (NumPy GBDT)"] = float(self.models["Gradient Boosted Trees (NumPy GBDT)"].predict_proba(x_norm)[0])
-        # 5. Anomaly Detector
-        scores["Unsupervised Isolation Profiler (NumPy)"] = float(self.models["Unsupervised Isolation Profiler (NumPy)"].anomaly_score(x_norm)[0])
-
-        # 6. Multi-Paradigm Soft-Voting Ensemble (Champion: 0.9808 ROC-AUC)
-        # Optimal Simplex Weights: MLP(0.35) + GBDT(0.30) + CostSensitiveLogReg(0.25) + Anomaly(0.10)
-        p_ensemble = (
-            0.35 * scores["Multi-Layer Perceptron (NumPy MLP)"] +
-            0.30 * scores["Gradient Boosted Trees (NumPy GBDT)"] +
-            0.25 * scores["Cost-Sensitive LogReg (NumPy)"] +
-            0.10 * scores["Unsupervised Isolation Profiler (NumPy)"]
-        )
-        scores["Soft-Voting Ensemble (Scratch Champion)"] = float(np.clip(p_ensemble, 0.0, 1.0))
-
-        return scores
-
-    def explain_transaction(self, x_raw: np.ndarray, model_name: str = "Cost-Sensitive LogReg (NumPy)") -> Dict[str, Any]:
-        """
-        Computes exact feature contributions (XAI) for any given transaction.
-        Returns top positive drivers (pushing toward fraud) and negative drivers (pushing toward legit).
-        """
-        if not self.is_loaded:
-            self.load()
-
-        x_norm = self.scale_features(x_raw)
-        if x_norm.ndim > 1:
-            x_norm = x_norm.ravel()
-
-        # Use linear / cost-sensitive weights for exact gradient contributions
-        model = self.models.get("Cost-Sensitive LogReg (NumPy)", self.models["Baseline Logistic Regression (NumPy)"])
-        w = model.w
-        b = model.b
-
-        contributions = x_norm * w
-        feature_impacts = []
-        for feat_name, impact, val_raw in zip(self.FEATURE_NAMES, contributions, x_raw):
-            feature_impacts.append({
-                "feature": feat_name,
-                "raw_value": float(val_raw),
-                "impact": float(impact),
-                "direction": "Fraud Driver" if impact > 0 else "Safety Indicator"
-            })
-
-        # Sort by absolute impact
-        feature_impacts.sort(key=lambda x: abs(x['impact']), reverse=True)
-        top_drivers = [f for f in feature_impacts if f['impact'] > 0][:5]
-        top_safeties = [f for f in feature_impacts if f['impact'] < 0][:5]
-
-        # Natural language synthesis
-        if len(top_drivers) > 0:
-            primary = top_drivers[0]
-            summary = (
-                f"Primary fraud signal triggered by feature **{primary['feature']}** "
-                f"with a risk impact coefficient of +{primary['impact']:.2f}. "
-            )
-            if any(d['feature'] == 'Amount' for d in top_drivers):
-                summary += "Transaction Amount represents an anomalous high-volume outlier. "
-            if any(d['feature'] in ['V14', 'V10', 'V12', 'V4', 'V17'] for d in top_drivers):
-                top_v = [d['feature'] for d in top_drivers if d['feature'] in ['V14', 'V10', 'V12', 'V4', 'V17']]
-                summary += f"Severe geometric anomalies detected along core fraud eigenvectors: {', '.join(top_v)}."
-        else:
-            summary = "All feature vectors align within nominal 99% benign consumer transaction boundaries."
-
-        return {
-            "top_drivers": top_drivers,
-            "top_safeties": top_safeties,
-            "all_impacts": feature_impacts,
-            "narrative": summary,
-            "bias": float(b)
-        }
 
 
 # Singleton instance
