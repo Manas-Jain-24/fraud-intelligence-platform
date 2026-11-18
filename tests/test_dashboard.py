@@ -7,6 +7,9 @@ from fraud_ops.store import InvestigationStore
 def test_dashboard_demo_assignment_resolution_and_rail_switch():
     at = AppTest.from_file(Path(__file__).resolve().parents[1] / "app.py", default_timeout=30).run()
     assert not at.exception
+    if (Path(__file__).resolve().parents[1] / "data/artifacts/workflow/report.json").exists():
+        assert any("Whole-workflow evaluation" in expander.label for expander in at.expander)
+        assert any("Staffing sensitivity" in item.value for item in at.markdown)
     at.sidebar.toggle[0].set_value(False)
     at.button(key="ops_seed_demo").click().run()
     assert not at.exception

@@ -17,6 +17,7 @@ def assess(profile, payload, threshold=None, *, explain=False, bundle=None):
         "model_name": bundle.model_name, "model_version": bundle.version,
         "score_kind": bundle.score_kind, "assessment_stage": bundle.stage,
         "policy": policy.to_dict(), "evaluation_status": bundle.metadata.get("protocol", bundle.metadata.get("evaluation_status")),
+        "workflow_policy_version": bundle.metadata.get("workflow_policy_version"),
         "latency_microseconds": (time.perf_counter()-start) * 1e6,
     }
     if explain:

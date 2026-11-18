@@ -7,6 +7,7 @@ from pathlib import Path
 import sqlite3
 
 from fraud_ops.history import behavioural_rules, history_features, parse_time
+from fraud_ops.workflow import active_rule_policy
 
 DEFAULT_DB = Path(__file__).resolve().parents[1] / "data" / "investigations.sqlite3"
 
@@ -82,10 +83,12 @@ class InvestigationStore:
                 (tx["rail"], int(tx.get("synthetic", False)), tx["event_time"], tx.get("sender_id"), tx.get("sender_id"),
                  tx.get("recipient_id"), tx.get("recipient_id"), tx.get("sender_id"), tx.get("sender_id"))).fetchall()
             features = history_features([dict(row) for row in prior], tx)
-            rules = behavioural_rules(features, tx)
+            rule_policy = active_rule_policy(tx["profile"], assessment["model_version"])
+            rules = behavioural_rules(features, tx, rule_policy, assessment["risk_score"])
             decision = policy.decide(assessment["risk_score"], stage=assessment["assessment_stage"], behavioural_alert=bool(rules))
             record = {**tx, "received_at": utc_now(), "assessment": {**assessment, **decision},
-                      "behavioural_features": features, "behavioural_rules": rules, "rule_version": "observed-history-rules-v1",
+                      "behavioural_features": features, "behavioural_rules": rules, "rule_version": rule_policy.version,
+                      "rule_policy": rule_policy.to_dict(),
                       "duplicate": False}
             record["assessment"]["decision_reasons"] = (["MODEL_THRESHOLD"] if assessment["risk_score"] >= policy.flag_threshold else []) + [rule["code"] for rule in rules]
             record_json = json.dumps(record, allow_nan=False)

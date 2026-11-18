@@ -35,6 +35,8 @@ The chronological card holdout currently has **65.5% precision, 73.1% recall, an
 
 See [the operations guide](docs/OPERATIONS.md) for setup, API examples, model selection, calibration, feature availability and limitations. Deployment hardening and load testing remain deferred.
 
+The [whole-workflow study](docs/WORKFLOW_EVALUATION.md) now replays the original PaySim history and measures model alerts, rule-only alerts, daily review demand and backlog. The dashboard includes staffing scenarios; the evaluation uses validation-selected cutoffs and a separate full-population test period.
+
 ## 📌 Executive Overview — original research
 
 **Fraud Intelligence Platform** is a dual-track, multi-rail machine learning research and financial risk operations platform evaluated across two distinct financial crime domains:

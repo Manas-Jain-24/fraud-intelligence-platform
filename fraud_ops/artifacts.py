@@ -101,7 +101,8 @@ def get_bundle(profile):
     pointer = artifact_root() / profile / "active.json"
     if pointer.exists():
         target = pointer.parent / json.loads(pointer.read_text(encoding="utf-8"))["bundle"]
-        return _load_bundle(str(target), target.stat().st_mtime_ns)
+        from fraud_ops.workflow import apply_workflow_policy
+        return apply_workflow_policy(_load_bundle(str(target), target.stat().st_mtime_ns))
     if profile == "wire_pre":
         raise FileNotFoundError("No pre-transaction model. Run python scripts/evaluate_operations.py --profiles wire_pre")
     return legacy_bundle(profile)

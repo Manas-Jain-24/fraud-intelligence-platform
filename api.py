@@ -170,6 +170,7 @@ class ScoringResponse(BaseModel):
     evaluation_status: Optional[str] = None
     diagnostic_model_version: str
     model_breakdown_score_kind: str = "uncalibrated_score"
+    workflow_policy_version: Optional[str] = None
 
 
 class FeatureImpact(BaseModel):
@@ -205,6 +206,7 @@ class ExplainabilityResponse(BaseModel):
     feature_order: List[str]
     reference: List[float]
     all_impacts: List[FeatureImpact]
+    workflow_policy_version: Optional[str] = None
 
 
 class ModelMetadata(BaseModel):

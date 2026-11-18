@@ -78,3 +78,5 @@ data/artifacts/**/active.json
 data/artifacts/**/split_membership.csv
 data/artifacts/**/test_predictions.csv
 data/artifacts/**/bootstrap_metrics.csv
+data/artifacts/**/test_workflow_predictions.csv
+data/artifacts/workflow/*_policy.json

@@ -168,6 +168,8 @@ These thresholds are illustrative, in the dataset's amount units. Rules **do not
 
 ## Verification and remaining scope
 
+For complete-history queue replay, daily backlog and validation-selected staffing scenarios, see [the whole-workflow evaluation](WORKFLOW_EVALUATION.md). This supplements the earlier model-only holdout results. The locally applied rule selection removes extra pre-transfer rules without raising the model cutoff.
+
 ```powershell
 python -m pytest
 ```

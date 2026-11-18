@@ -31,7 +31,8 @@ def seed_demo(store):
             payload.update(newbalanceOrig=5000.-amount, newbalanceDest=1000.+amount)
         ingest(profile, payload, {"transaction_id": f"{batch}-{i+1:02d}",
             "event_time": (start + timedelta(seconds=i * 45)).isoformat(),
-            "sender_id": f"{batch}-{sender}", "recipient_id": f"{batch}-{recipient}", "synthetic": True}, store=store)
+            "sender_id": f"{batch}-{sender}", "recipient_id": f"{batch}-{recipient}", "synthetic": True}, store=store,
+            force_case=i in (3, 4, 8))
     return batch
 
 
@@ -41,7 +42,7 @@ def render_investigations():
     store = InvestigationStore()
     if st.button("Create synthetic investigation scenario", key="ops_seed_demo"):
         batch = seed_demo(store)
-        st.success(f"Created {batch}: recipient fan-in, rapid cash-out and a sender burst.")
+        st.success(f"Created {batch}: recipient fan-in, rapid cash-out and a sender burst. Three example cases are opened for inspection; rule routing follows the active policy.")
 
     with st.expander("Ingest a transaction", expanded=False):
         st.caption("Pre-transfer inputs exclude post-transaction balances. Entity IDs enable history rules; an unseen beneficiary means unseen in this local history.")
@@ -138,6 +139,8 @@ def render_investigations():
 
 def render_evaluation():
     st.subheader("Measured model performance")
+    with st.expander("Whole-workflow evaluation and analyst capacity", expanded=False):
+        render_workflow_evaluation()
     left, right = st.columns(2)
     profile = left.selectbox("Model profile", ["card", "wire", "wire_pre"], key="evaluation_profile")
     protocol = right.selectbox("Evaluation protocol", ["chronological", "stratified"], key="evaluation_protocol")
@@ -171,5 +174,49 @@ def render_evaluation():
     st.caption("Sparse fraud counts make reliability estimates uncertain. An uncalibrated selected output is displayed as a score, not a probability.")
     with st.expander("Model and calibration competition (validation only)"):
         st.dataframe(pd.read_csv(report_path.parent / "validation_comparison.csv").sort_values("expected_loss"), hide_index=True, use_container_width=True)
+    for limitation in report["limitations"]:
+        st.caption(limitation)
+
+
+def render_workflow_evaluation():
+    report_path = artifact_root() / "workflow/report.json"
+    if not report_path.exists():
+        st.info("Run python scripts/evaluate_workflow.py to compare model-only and combined alert queues using complete PaySim histories.")
+        return
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    st.caption(f"Complete original source: {report['source_rows']:,} events. History uses strictly earlier recorded hours. The model is fixed; cutoffs are selected on validation only.")
+    st.write("Review-capacity scenario:", report["capacity"])
+    comparison = pd.DataFrame(report["comparison"])
+    test = comparison.loc[comparison.partition == "test"]
+    st.dataframe(test[["strategy", "n", "tp", "fp", "precision", "recall", "cases", "rule_only_cases",
+                       "peak_new_cases_per_day", "days_over_capacity", "peak_backlog", "final_backlog"]],
+                 hide_index=True, use_container_width=True)
+    default = test.loc[test.strategy == "model_plus_default_rules"].iloc[0]
+    tuned = test.loc[test.strategy == "capacity_tuned_combined"].iloc[0]
+    st.info(f"Default rules add {int(default.rule_only_cases):,} review cases and catch {int(default.incremental_frauds_from_rules):,} additional frauds. "
+            f"The capacity-selected scenario has {tuned.recall:.1%} recall. Staffing comparisons require explicit activation.")
+    from fraud_ops.workflow import selected_workflow_policy
+    active = selected_workflow_policy("wire_pre", report["model_version"])
+    if active:
+        st.caption(f"Active local policy: {active['workflow_policy_version']} · {active.get('scope', 'capacity-selected policy')} · "
+                   f"enabled rules: {', '.join(active['rule_policy']['enabled_rules']) or 'none'}.")
+    sensitivity = pd.DataFrame(report.get("capacity_sensitivity", []))
+    if not sensitivity.empty:
+        sensitivity = sensitivity.loc[sensitivity.partition == "test"]
+        st.markdown("**Staffing sensitivity**")
+        st.caption("Case duration and shift length are assumptions. Every scenario's cutoff is chosen on validation before its test result is measured.")
+        st.dataframe(sensitivity[["analysts", "cases_per_day", "model_threshold", "recall", "precision", "cases", "days_over_capacity", "peak_backlog"]],
+                     hide_index=True, use_container_width=True)
+        figure = go.Figure()
+        figure.add_scatter(x=sensitivity.analysts, y=sensitivity.recall, mode="lines+markers", name="Test recall")
+        figure.update_layout(xaxis_title="Analysts in the stated scenario", yaxis_title="Held-out fraud recall", height=280)
+        st.plotly_chart(figure, use_container_width=True)
+    workload = pd.read_csv(report_path.parent / "daily_workload.csv")
+    workload = workload.loc[(workload.partition == "test") & (workload.strategy.isin(["model_plus_default_rules", "capacity_tuned_combined"]))]
+    figure = go.Figure()
+    for name, group in workload.groupby("strategy", sort=False):
+        figure.add_scatter(x=group.day_offset, y=group.backlog_end, mode="lines+markers", name=name)
+    figure.update_layout(xaxis_title="Dataset day offset", yaxis_title="Unreviewed cases at day end", height=300)
+    st.plotly_chart(figure, use_container_width=True)
     for limitation in report["limitations"]:
         st.caption(limitation)
